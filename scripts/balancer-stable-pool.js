@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const fs = require("fs");
 const ethers = hre.ethers;
 const BN = require('bn.js');
+const {web3} = require("@openzeppelin/test-helpers/src/setup");
 
 let BalancerFactory = JSON.parse(fs.readFileSync('./abi/StablePhantomPoolFactory.json'));
 let Pool = JSON.parse(fs.readFileSync('./abi/StablePhantomPool.json'));
@@ -22,7 +23,7 @@ let lpUsdPlusAddress = "0x1aAFc31091d93C3Ff003Cff5D2d8f7bA2e728425";
 async function main() {
 
     let wallet = await initWallet();
-    let poolAddress = createStablePool(wallet);
+    let poolAddress = await createStablePool(wallet);
     // let poolAddress = "0xE051605A83dEAe38d26a7346B100EF1AC2ef8a0b";
     await tests(poolAddress, wallet);
 
@@ -73,12 +74,60 @@ async function tests(stablePoolAddress, wallet) {
     let stablePool = await ethers.getContractAt(Pool, stablePoolAddress, wallet);
     let vault = await ethers.getContractAt(Vault, "0xba12222222228d8ba445958a75a0704d566bf2c8", wallet);
 
+    console.log("stablePool.getPoolId: " + await stablePool.getPoolId());
+
     await showBalances(vault, stablePool);
+    await initPool(wallet);
 
     // await addLinearPool(wallet);
-    await addDAI(wallet);
+    // await addDAI(wallet);
     // await addUSDT(wallet);
     await showBalances(vault, stablePool);
+
+
+    async function initPool(wallet) {
+        console.log("stablePool.totalSupply: " + await stablePool.totalSupply());
+
+        let lpUsdPlus = await ethers.getContractAt(ERC20, lpUsdPlusAddress, wallet);
+        let usdt = await ethers.getContractAt(ERC20, usdtAddress, wallet);
+        let dai = await ethers.getContractAt(ERC20, daiAddress, wallet);
+
+
+        console.log('Balance LP USD+: ' + await lpUsdPlus.balanceOf(wallet.address) / 1e18);
+
+        // web3.eth.abi.encodeParameter(['uint256', 'uint256[]'], [StablePoolJoinKind.INIT, amountsIn]);
+        let {tokens, initAmountsIn} = await makeInitialBalances(vault, stablePool);
+        let userData = web3.eth.abi.encodeParameters(['uint256', 'uint256[]'], [0, initAmountsIn]);
+        console.log(`userData: ${userData}`);
+
+        let value18 = new BN(10).pow(new BN(18)).muln(100).toString(); // approve for 100$
+        let value6 = new BN(10).pow(new BN(6)).muln(100).toString(); // approve for 100$
+
+        await lpUsdPlus.approve(vault.address, value18);
+        await usdt.approve(vault.address, value6);
+        await dai.approve(vault.address, value18);
+        console.log("Vault approved");
+
+        let uint256Max = new BN(2).pow(new BN(256)).subn(1).toString(); // type(uint256).max
+
+        console.log("Before stable joinPool")
+        await vault.joinPool(
+            await stablePool.getPoolId(),
+            wallet.address,
+            wallet.address,
+            {
+                assets: tokens,
+                maxAmountsIn: [uint256Max, uint256Max, uint256Max, uint256Max],
+                userData: userData,
+                fromInternalBalance: false
+            }
+        );
+        console.log("joinPool done")
+
+        console.log('Balance  LP USD+: ' + await lpUsdPlus.balanceOf(wallet.address) / 1e18);
+        console.log('Balance  ST LP USD+: ' + await stablePool.balanceOf(wallet.address) / 1e18);
+
+    }
 
 
     async function addLinearPool(wallet) {
@@ -113,7 +162,6 @@ async function tests(stablePoolAddress, wallet) {
     }
 
     async function addUSDT(wallet) {
-
 
         let usdt = await ethers.getContractAt(ERC20, usdtAddress, wallet);
 
@@ -150,7 +198,7 @@ async function tests(stablePoolAddress, wallet) {
 
         console.log('Balance DAI: ' + await dai.balanceOf(wallet.address) / 1e18);
 
-        let value = new BN(1).pow(new BN(18)).toString();
+        let value = new BN(10).pow(new BN(18)).toString();
         await dai.approve(vault.address, value);
         await vault.swap(
             {
@@ -171,7 +219,7 @@ async function tests(stablePoolAddress, wallet) {
             1000000000000
         );
 
-        console.log('Balance DAI: ' + await dai.balanceOf(wallet.address) /1e18);
+        console.log('Balance DAI: ' + await dai.balanceOf(wallet.address) / 1e18);
 
     }
 }
@@ -233,6 +281,8 @@ async function addLiquidityLinearPool(wallet) {
     console.log('Balance USD+: ' + await usdPlus.balanceOf(wallet.address) / 1e6);
     console.log('Balance USDC: ' + await usdc.balanceOf(wallet.address) / 1e6);
     console.log('Balance StaticUSD+: ' + await staticUsdPlus.balanceOf(wallet.address) / 1e6);
+    console.log('Balance DAI: ' + await staticUsdPlus.balanceOf(wallet.address) / 1e6);
+    console.log('Balance USDT: ' + await staticUsdPlus.balanceOf(wallet.address) / 1e6);
     console.log('Balance LinearPool LP: ' + await pool.balanceOf(wallet.address) / 1e6);
 
 
@@ -284,6 +334,49 @@ async function showBalances(vault, pool) {
         console.log(`- ${name}:${balance}`);
     }
 
+}
+
+async function makeInitialBalances(vault, pool) {
+    const {tokens, balances} = await vault.getPoolTokens(await pool.getPoolId());
+
+    console.log('Init balances:')
+
+    let initAmountsIn = []
+
+    for (let i = 0; i < tokens.length; i++) {
+        let token = tokens[i];
+
+        let name = "";
+        switch (token.toLowerCase()) {
+            case "0xc2132d05d31c914a87c6611c10748aeb04b58e8f".toLowerCase():
+                name = "USDT";
+                initAmountsIn[i] = new BN(10).pow(new BN(6)).muln(3).toString(); // 3$
+                break
+            case "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063".toLowerCase():
+                name = "DAI ";
+                initAmountsIn[i] = new BN(10).pow(new BN(18)).muln(3).toString(); // 3$
+                break
+            case lpUsdPlusAddress.toLowerCase():
+                name = "LP ";
+                initAmountsIn[i] = new BN(10).pow(new BN(18)).muln(3).toString(); // 3$
+                break
+            default:
+                name = "Stable LP  ";
+                initAmountsIn[i] = "9000000000000000000";
+                break
+        }
+
+        console.log(`- ${name}: ${initAmountsIn[i]}`);
+    }
+
+    console.log(`- tokens array: ${tokens}`);
+    console.log(`- initAmountsIn array: ${initAmountsIn}`);
+    console.log(`------------------------------------`);
+
+    return {
+        tokens: tokens,
+        initAmountsIn: initAmountsIn
+    };
 }
 
 
