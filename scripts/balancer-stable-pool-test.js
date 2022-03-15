@@ -2,23 +2,19 @@ const hre = require("hardhat");
 const fs = require("fs");
 const ethers = hre.ethers;
 const BN = require('bn.js');
+const {expect} = require("chai");
 
 
-let BalancerFactory = JSON.parse(fs.readFileSync('./abi/StablePhantomPoolFactory.json'));
 let Pool = JSON.parse(fs.readFileSync('./abi/StablePhantomPool.json'));
-let LinearPool = JSON.parse(fs.readFileSync('./abi/ERC4626LinearPool.json'));
 let Vault = JSON.parse(fs.readFileSync('./abi/VaultBalancer.json'));
 
-let USDPlus = JSON.parse(fs.readFileSync('./abi/UsdPlusToken.json'));
-let StaticUsdPlus = JSON.parse(fs.readFileSync('./abi/StaticUsdPlusToken.json'));
+let UsdPlusToken = JSON.parse(fs.readFileSync('./abi/UsdPlusToken.json'));
 let ERC20 = JSON.parse(fs.readFileSync('./abi/ERC20.json'));
-
-let BalancerFactoryAddress = "0xC128a9954e6c874eA3d62ce62B468bA073093F25";
-let owner = "0xe497285e466227f4e8648209e34b465daa1f90a0";
 
 let usdtAddress = "0xc2132d05d31c914a87c6611c10748aeb04b58e8f";
 let daiAddress = "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063";
 let lpUsdPlusAddress = "0x1aAFc31091d93C3Ff003Cff5D2d8f7bA2e728425";
+
 let ONE_LP = "1000000000000000000";
 
 async function main() {
@@ -31,23 +27,43 @@ async function main() {
     let usdt = await ethers.getContractAt(ERC20, usdtAddress, wallet);
     let dai = await ethers.getContractAt(ERC20, daiAddress, wallet);
     let lpUsdPlus = await ethers.getContractAt(ERC20, lpUsdPlusAddress, wallet);
-
-    await showBalances();
-
-    await swapDAItoLP();
-    await swapUSDTtoLP();
-    await swapUSDPlustoLP();
-
-    await showBalances();
-
-    await swapLPtoDAI();
-    await swapLPtoUSDT();
-    await swapLPtoUSDPlus();
-
-    await showBalances();
+    let usdPlus = await ethers.getContractAt(UsdPlusToken.abi, UsdPlusToken.address, wallet);
 
 
-    async function swapLPtoUSDT(){
+    // 1) Swaps
+
+    // await showBalances();
+    //
+    // await swapDAItoLP();
+    // await swapUSDTtoLP();
+    // await swapUSDPlustoLP();
+    //
+    // await showBalances();
+    //
+    // await swapLPtoDAI();
+    // await swapLPtoUSDT();
+    // await swapLPtoUSDPlus();
+    //
+    // await showBalances();
+
+
+    // 2) Set Liquidity index
+
+    // let newLiquidityIndex = new BN(10).pow(new BN(24)); // 10^27
+    // await setLiquidityIndex(newLiquidityIndex.toString());
+
+    // await showBalances();
+
+
+    async function setLiquidityIndex(value){
+        console.log('[Set liquidity index]')
+
+        console.log('Old liquidity index: ' + await usdPlus.liquidityIndex());
+        await usdPlus.setLiquidityIndex(value);
+        console.log('New liquidity index: ' + await usdPlus.liquidityIndex());
+    }
+
+    async function swapLPtoUSDT() {
 
         console.log('[Swap 1 LP to USDT] ...');
         await stablePool.approve(vault.address, ONE_LP);
@@ -72,7 +88,7 @@ async function main() {
 
     }
 
-    async function swapLPtoUSDPlus(){
+    async function swapLPtoUSDPlus() {
 
         console.log('[Swap 1 LP to USD+] ...');
         await stablePool.approve(vault.address, ONE_LP);
@@ -97,7 +113,7 @@ async function main() {
 
     }
 
-    async function swapUSDTtoLP(){
+    async function swapUSDTtoLP() {
 
         console.log('[Swap all USDT to LP] ...');
 
@@ -124,7 +140,7 @@ async function main() {
 
     }
 
-    async function swapUSDPlustoLP(){
+    async function swapUSDPlustoLP() {
 
         console.log('[Swap all USD+ to LP] ...');
 
@@ -150,7 +166,7 @@ async function main() {
 
     }
 
-    async function swapDAItoLP(){
+    async function swapDAItoLP() {
 
         console.log('[Swap all DAI to LP] ...');
 
@@ -176,7 +192,7 @@ async function main() {
 
     }
 
-    async function swapLPtoDAI(){
+    async function swapLPtoDAI() {
 
         console.log('[Swap 1 LP to DAI] ...');
 
@@ -244,9 +260,59 @@ async function main() {
         console.log();
     }
 
+
+    async function execProposal(governator, ovn, id, wallet) {
+
+        addresses.push(usdPlus.address);
+        values.push(0);
+        abis.push(usdPlus.interface.encodeFunctionData('grantRole', [await usdPlus.EXCHANGER(), exchangeNew.address]))
+
+        let quorum = fromOvnGov(await governator.quorum(await ethers.provider.getBlockNumber() - 1));
+        console.log('Quorum: ' + quorum);
+
+        const proposalId = id;
+
+        let votes = ethers.utils.parseUnits("100000100", 9);
+
+        let state = proposalStates[await governator.state(proposalId)];
+        if (state === "Executed") {
+            return;
+        }
+
+        console.log('State status: ' + state)
+        await ethers.provider.send('evm_mine'); // wait 1 block before opening voting
+
+        console.log('Votes: ' + votes)
+        await governator.castVote(proposalId, 1);
+
+        let item = await governator.proposals(proposalId);
+        console.log('Votes for: ' + item.forVotes / 10 ** 18);
+
+        let total = fromOvnGov(await ovn.getVotes(wallet.address));
+        console.log('Delegated ' + total)
+
+        let waitBlock = 200;
+        const sevenDays = 7 * 24 * 60 * 60;
+        for (let i = 0; i < waitBlock; i++) {
+            await ethers.provider.send("evm_increaseTime", [sevenDays])
+            await ethers.provider.send('evm_mine'); // wait 1 block before opening voting
+        }
+
+        state = proposalStates[await governator.state(proposalId)];
+        expect(state).to.eq('Succeeded');
+        await governator.queueExec(proposalId);
+        await ethers.provider.send('evm_mine'); // wait 1 block before opening voting
+        await governator.executeExec(proposalId);
+
+
+        state = proposalStates[await governator.state(proposalId)];
+        console.log('State status: ' + state)
+        expect(state).to.eq('Executed');
+
+
+    }
+
 }
-
-
 
 
 
