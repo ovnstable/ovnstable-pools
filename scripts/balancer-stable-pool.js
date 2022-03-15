@@ -78,12 +78,7 @@ async function tests(stablePoolAddress, wallet) {
 
     await showBalances(vault, stablePool);
     await initPool(wallet);
-
-    // await addLinearPool(wallet);
-    // await addDAI(wallet);
-    // await addUSDT(wallet);
     await showBalances(vault, stablePool);
-
 
     async function initPool(wallet) {
         console.log("stablePool.totalSupply: " + await stablePool.totalSupply());
@@ -129,99 +124,6 @@ async function tests(stablePoolAddress, wallet) {
 
     }
 
-
-    async function addLinearPool(wallet) {
-
-        let lpUsdPlus = await ethers.getContractAt(ERC20, lpUsdPlusAddress, wallet);
-
-        let value = new BN(1).pow(new BN(18)).toString();
-        console.log('Balance LP USD+: ' + await lpUsdPlus.balanceOf(wallet.address) / 1e18);
-
-        await lpUsdPlus.approve(vault.address, value);
-        await vault.swap(
-            {
-                poolId: await stablePool.getPoolId(),
-                kind: 0,
-                assetIn: lpUsdPlus.address,
-                assetOut: stablePoolAddress,
-                amount: value,
-                userData: "0x",
-            },
-            {
-                sender: wallet.address,
-                fromInternalBalance: false,
-                recipient: wallet.address,
-                toInternalBalance: false,
-            },
-            0,
-            1000000000000
-        );
-
-        console.log('Balance  LP USD+: ' + await lpUsdPlus.balanceOf(wallet.address) / 1e18);
-
-    }
-
-    async function addUSDT(wallet) {
-
-        let usdt = await ethers.getContractAt(ERC20, usdtAddress, wallet);
-
-        console.log('Balance USDT: ' + await usdt.balanceOf(wallet.address) / 1e6);
-
-        await usdt.approve(vault.address, 5 * 1e6);
-        await vault.swap(
-            {
-                poolId: await stablePool.getPoolId(),
-                kind: 0,
-                assetIn: usdt.address,
-                assetOut: stablePoolAddress,
-                amount: 5 * 1e6,
-                userData: "0x",
-            },
-            {
-                sender: wallet.address,
-                fromInternalBalance: false,
-                recipient: wallet.address,
-                toInternalBalance: false,
-            },
-            0,
-            1000000000000
-        );
-
-        console.log('Balance USDT: ' + await usdt.balanceOf(wallet.address));
-
-    }
-
-    async function addDAI(wallet) {
-
-
-        let dai = await ethers.getContractAt(ERC20, daiAddress, wallet);
-
-        console.log('Balance DAI: ' + await dai.balanceOf(wallet.address) / 1e18);
-
-        let value = new BN(10).pow(new BN(18)).toString();
-        await dai.approve(vault.address, value);
-        await vault.swap(
-            {
-                poolId: await stablePool.getPoolId(),
-                kind: 0,
-                assetIn: dai.address,
-                assetOut: stablePoolAddress,
-                amount: value,
-                userData: "0x",
-            },
-            {
-                sender: wallet.address,
-                fromInternalBalance: false,
-                recipient: wallet.address,
-                toInternalBalance: false,
-            },
-            0,
-            1000000000000
-        );
-
-        console.log('Balance DAI: ' + await dai.balanceOf(wallet.address) / 1e18);
-
-    }
 }
 
 
