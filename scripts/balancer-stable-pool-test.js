@@ -14,6 +14,7 @@ let ERC20 = JSON.parse(fs.readFileSync('./abi/ERC20.json'));
 let usdtAddress = "0xc2132d05d31c914a87c6611c10748aeb04b58e8f";
 let daiAddress = "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063";
 let lpUsdPlusAddress = "0x1aAFc31091d93C3Ff003Cff5D2d8f7bA2e728425";
+let usdcAddress = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174";
 
 let ONE_LP = "1000000000000000000";
 
@@ -25,6 +26,7 @@ async function main() {
     let stablePool = await ethers.getContractAt(Pool, poolAddress, wallet);
     let vault = await ethers.getContractAt(Vault, "0xba12222222228d8ba445958a75a0704d566bf2c8", wallet);
     let usdt = await ethers.getContractAt(ERC20, usdtAddress, wallet);
+    let usdc = await ethers.getContractAt(ERC20, usdcAddress, wallet);
     let dai = await ethers.getContractAt(ERC20, daiAddress, wallet);
     let lpUsdPlus = await ethers.getContractAt(ERC20, lpUsdPlusAddress, wallet);
     let usdPlus = await ethers.getContractAt(UsdPlusToken.abi, UsdPlusToken.address, wallet);
@@ -32,7 +34,7 @@ async function main() {
 
     // 1) Swaps
 
-    // await showBalances();
+    await showBalances();
     //
     // await swapDAItoLP();
     // await swapUSDTtoLP();
@@ -253,8 +255,9 @@ async function main() {
 
         console.log('\n[Balance user]:\n');
         console.log('- USDT:       ' + await usdt.balanceOf(wallet.address) / 1e6);
-        console.log('- LP USD+:    ' + await lpUsdPlus.balanceOf(wallet.address) / 1e18);
+        console.log('- USDC:       ' + await usdc.balanceOf(wallet.address) / 1e6);
         console.log('- DAI:        ' + await dai.balanceOf(wallet.address) / 1e18);
+        console.log('- LP USD+:    ' + await lpUsdPlus.balanceOf(wallet.address) / 1e18);
         console.log('- Stable LP:  ' + await stablePool.balanceOf(wallet.address) / 1e18);
 
         console.log();
