@@ -25,8 +25,10 @@ async function main() {
     console.log('1: Balance StaticUSD+: ' + await staticUsdPlus.balanceOf(wallet.address) / 1e6);
 
 
-    await usdPlus.approve(staticUsdPlus.address, 10*1e6);
-    await staticUsdPlus.deposit(10 * 1e6, wallet.address);
+    await (await usdPlus.approve(staticUsdPlus.address, 10*1e6, { maxFeePerGas: "250000000000", maxPriorityFeePerGas: "250000000000" }
+    )).wait();
+    await (await staticUsdPlus.deposit(10 * 1e6, wallet.address,{ maxFeePerGas: "250000000000", maxPriorityFeePerGas: "250000000000" }
+    )).wait();
 
     console.log('2: Balance USD+: ' + await usdPlus.balanceOf(wallet.address) / 1e6);
     console.log('2: Balance USDC: ' + await usdc.balanceOf(wallet.address) / 1e6);
@@ -40,8 +42,12 @@ async function main() {
 
     console.log(`2: Targets: lower: ${targets[0].toString()} upper: ${targets[1].toString()}`);
     console.log(`2: Balances: ${balances[0].toString()} : ${balances[1].toString()}`);
-    await usdc.approve(vault.address, 5 * 1e6);
-    await vault.swap(
+    await (await usdc.approve(vault.address, 5 * 1e6, {
+        maxFeePerGas: "250000000000",
+        maxPriorityFeePerGas: "250000000000"
+    })).wait();
+
+    await (await vault.swap(
         {
             poolId: await pool.getPoolId(),
             kind: 0,
@@ -57,8 +63,9 @@ async function main() {
             toInternalBalance: false,
         },
         0,
-        1000000000000
-    );
+        1000000000000,
+        {maxFeePerGas: "250000000000", maxPriorityFeePerGas: "250000000000"}
+    )).wait();
 
     console.log('3: Balance USD+: ' + await usdPlus.balanceOf(wallet.address) / 1e6);
     console.log('3: Balance USDC: ' + await usdc.balanceOf(wallet.address) / 1e6);
@@ -72,9 +79,12 @@ async function main() {
     console.log(`3: Balances: ${balances[0].toString()} : ${balances[1].toString()}`);
 
 
-
-    await staticUsdPlus.approve(vault.address, 5 * 1e6);
-    await vault.swap(
+    await (await staticUsdPlus.approve(vault.address, 5 * 1e6, {
+            maxFeePerGas: "250000000000",
+            maxPriorityFeePerGas: "250000000000"
+        })
+    ).wait();
+    await (await vault.swap(
         {
             poolId: await pool.getPoolId(),
             kind: 0,
@@ -90,8 +100,9 @@ async function main() {
             toInternalBalance: false,
         },
         0,
-        1000000000000
-    );
+        1000000000000,
+        {maxFeePerGas: "250000000000", maxPriorityFeePerGas: "250000000000"}
+    )).wait();
 
 
     console.log('4: Balance USD+: ' + await usdPlus.balanceOf(wallet.address) / 1e6);
@@ -109,7 +120,6 @@ async function main() {
 }
 
 
-
 main()
     .then(() => process.exit(0))
     .catch((error) => {
@@ -119,6 +129,7 @@ main()
 
 async function initWallet() {
 
+    // let provider = new ethers.providers.JsonRpcProvider(process.env.ETH_NODE_URI_POLYGON);
     let provider = ethers.provider;
     console.log('Provider: ' + provider.connection.url);
     let wallet = await new ethers.Wallet(process.env.PK_POLYGON, provider);

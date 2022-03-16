@@ -53,15 +53,15 @@ async function main() {
         let value18 = new BN(10).pow(new BN(18)).muln(100).toString(); // approve for 100$
         let value6 = new BN(10).pow(new BN(6)).muln(100).toString(); // approve for 100$
 
-        await lpUsdPlus.approve(vault.address, value18);
-        await usdt.approve(vault.address, value6);
-        await dai.approve(vault.address, value18);
+        await (await lpUsdPlus.approve(vault.address, value18)).wait();
+        await (await usdt.approve(vault.address, value6)).wait();
+        await (await dai.approve(vault.address, value18)).wait();
         console.log("Vault approved");
 
         let uint256Max = new BN(2).pow(new BN(256)).subn(1).toString(); // type(uint256).max
 
         console.log("Before stable joinPool")
-        await vault.joinPool(
+        await (await vault.joinPool(
             await stablePool.getPoolId(),
             wallet.address,
             wallet.address,
@@ -71,7 +71,7 @@ async function main() {
                 userData: userData,
                 fromInternalBalance: false
             }
-        );
+        )).wait();
         console.log("joinPool done")
 
         console.log('Balance  LP USD+: ' + await lpUsdPlus.balanceOf(wallet.address) / 1e18);

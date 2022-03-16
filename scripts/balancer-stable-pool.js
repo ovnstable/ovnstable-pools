@@ -52,14 +52,16 @@ async function createStablePool(wallet) {
     let swapFee = "100000000000000"; // 0.01%
 
     let promise = await factory.create(
-        'Balancer USD+ Boosted StablePool',
-        'bb-USD+',
+        'Balancer USD+ StablePool',
+        'SP-USDT/DAI/LP-USD+',
         tokens,
         amplificationParameter.toString(),
         rateProviders,
         tokenRateCacheDurations,
         swapFee,
-        owner);
+        owner,
+        { maxFeePerGas: "100000000000", maxPriorityFeePerGas: "100000000000" }
+        );
 
 
     let tx = await promise.wait();
@@ -116,6 +118,7 @@ main()
 
 async function initWallet() {
 
+    // let provider = new ethers.providers.JsonRpcProvider(process.env.ETH_NODE_URI_POLYGON);
     let provider = ethers.provider;
     console.log('Provider: ' + provider.connection.url);
     let wallet = await new ethers.Wallet(process.env.PK_POLYGON, provider);

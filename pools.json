@@ -1,10 +1,15 @@
 {
-   "Polygon" : {
-     "Balancer": {
-       "Linear Pool USDC-USD+": {
-         "address" : "0x1aAFc31091d93C3Ff003Cff5D2d8f7bA2e728425",
-         "poolId": "0x1AAFC31091D93C3FF003CFF5D2D8F7BA2E7284250000000000000000000003B3"
-       }
-     }
-   }
+  "Polygon": {
+    "Balancer": {
+      "Linear Pool USDC-USD+": {
+        "address": "0x1aAFc31091d93C3Ff003Cff5D2d8f7bA2e728425",
+        "poolId": "0x1AAFC31091D93C3FF003CFF5D2D8F7BA2E7284250000000000000000000003B3"
+      },
+      "Balancer USD+ StablePool": {
+        "address": "0xE051605A83dEAe38d26a7346B100EF1AC2ef8a0b",
+        "tx": "0xc6ab10eca2f7414a956a8a331993c3f395cd056b797743d9d1fb013cda473edb",
+        "poolId": "E051605A83DEAE38D26A7346B100EF1AC2EF8A0B0000000000000000000003CE"
+      }
+    }
+  }
 }
