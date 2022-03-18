@@ -4,17 +4,10 @@ const ethers = hre.ethers;
 const BN = require('bn.js');
 const {web3} = require("@openzeppelin/test-helpers/src/setup");
 
-let BalancerFactory = JSON.parse(fs.readFileSync('./abi/StablePhantomPoolFactory.json'));
 let Pool = JSON.parse(fs.readFileSync('./abi/StablePhantomPool.json'));
-let LinearPool = JSON.parse(fs.readFileSync('./abi/ERC4626LinearPool.json'));
 let Vault = JSON.parse(fs.readFileSync('./abi/VaultBalancer.json'));
 
-let USDPlus = JSON.parse(fs.readFileSync('./abi/UsdPlusToken.json'));
-let StaticUsdPlus = JSON.parse(fs.readFileSync('./abi/StaticUsdPlusToken.json'));
 let ERC20 = JSON.parse(fs.readFileSync('./abi/ERC20.json'));
-
-let BalancerFactoryAddress = "0xC128a9954e6c874eA3d62ce62B468bA073093F25";
-let owner = "0xe497285e466227f4e8648209e34b465daa1f90a0";
 
 let usdtAddress = "0xc2132d05d31c914a87c6611c10748aeb04b58e8f";
 let daiAddress = "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063";
@@ -45,13 +38,13 @@ async function main() {
 
         console.log('Balance LP USD+: ' + await lpUsdPlus.balanceOf(wallet.address) / 1e18);
 
-        // web3.eth.abi.encodeParameter(['uint256', 'uint256[]'], [StablePoolJoinKind.INIT, amountsIn]);
+        // Same to (['uint256', 'uint256[]'], [StablePoolJoinKind.INIT, amountsIn]);
         let {tokens, initAmountsIn} = await makeInitialBalances(vault, stablePool);
         let userData = web3.eth.abi.encodeParameters(['uint256', 'uint256[]'], [0, initAmountsIn]);
         console.log(`userData: ${userData}`);
 
-        let value18 = new BN(10).pow(new BN(18)).muln(100).toString(); // approve for 100$
-        let value6 = new BN(10).pow(new BN(6)).muln(100).toString(); // approve for 100$
+        let value18 = new BN(10).pow(new BN(18)).muln(35000).toString(); // approve for 35000$
+        let value6 = new BN(10).pow(new BN(6)).muln(35000).toString(); // approve for 35000$
 
         await (await lpUsdPlus.approve(vault.address, value18)).wait();
         await (await usdt.approve(vault.address, value6)).wait();
@@ -130,15 +123,15 @@ async function makeInitialBalances(vault, pool) {
         switch (token.toLowerCase()) {
             case "0xc2132d05d31c914a87c6611c10748aeb04b58e8f".toLowerCase():
                 name = "USDT";
-                initAmountsIn[i] = new BN(10).pow(new BN(6)).muln(3).toString(); // 3$
+                initAmountsIn[i] = new BN(10).pow(new BN(6)).muln(35000).toString(); // 35000$
                 break
             case "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063".toLowerCase():
                 name = "DAI ";
-                initAmountsIn[i] = new BN(10).pow(new BN(18)).muln(3).toString(); // 3$
+                initAmountsIn[i] = new BN(10).pow(new BN(18)).muln(35000).toString(); // 35000$
                 break
             case lpUsdPlusAddress.toLowerCase():
                 name = "LP ";
-                initAmountsIn[i] = new BN(10).pow(new BN(18)).muln(3).toString(); // 3$
+                initAmountsIn[i] = new BN(10).pow(new BN(18)).muln(35000).toString(); // 35000$
                 break
             default:
                 name = "Stable LP  ";
