@@ -57,7 +57,7 @@ async function walletBalances(tokens, names, wallet) {
 
     let balances = {};
     for (const token of tokens) {
-        balances[names[token.address]] = str(await token.balanceOf(wallet.address));
+        balances[names[token.address.toString().toLowerCase()]] = str(await token.balanceOf(wallet.address));
     }
     return balances;
 }
@@ -80,7 +80,7 @@ async function poolBalances(tokensIn, names, pool, vault) {
 
     let resBalances = {};
     for (const token of tokensIn) {
-        resBalances[names[token.address]] = map[token.address.toString().toLowerCase()];
+        resBalances[names[token.address.toString().toLowerCase()]] = map[token.address.toString().toLowerCase()];
     }
     return resBalances;
 }
@@ -90,10 +90,28 @@ function str(value) {
     return value.toString();
 }
 
+
+function unscaleFrom18(value, decimals) {
+    return value.div(new BN(10).pow(new BN(18).sub(decimals)));
+}
+
+function scaleTo18(value, decimals) {
+    return value.mul(new BN(10).pow(new BN(18).sub(decimals)));
+}
+
+
+function addr(token) {
+    return token.address.toString().toLowerCase();
+}
+
+
 module.exports = {
     str,
     balances,
     walletBalances,
     poolBalances,
-    upByDecimals
+    upByDecimals,
+    unscaleFrom18,
+    scaleTo18,
+    addr
 }
