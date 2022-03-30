@@ -31,7 +31,7 @@ async function main() {
     console.log('2: Balance StaticUSD+: ' + await staticUsdPlus.balanceOf(wallet.address) / 1e6);
 
 
-    let poolAddress = "0x1aAFc31091d93C3Ff003Cff5D2d8f7bA2e728425";
+    let poolAddress = "0x6933ec1CA55C06a894107860c92aCdFd2Dd8512f";
 
     let pool = await ethers.getContractAt(Pool, poolAddress, wallet);
 

@@ -9,7 +9,7 @@ let Vault = JSON.parse(fs.readFileSync('./abi/VaultBalancer.json'));
 let StaticUsdPlus = JSON.parse(fs.readFileSync('./abi/StaticUsdPlusToken.json'));
 let ERC20 = JSON.parse(fs.readFileSync('./abi/ERC20.json'));
 
-let poolAddress = "0x1aAFc31091d93C3Ff003Cff5D2d8f7bA2e728425";
+let poolAddress = "0x6933ec1CA55C06a894107860c92aCdFd2Dd8512f";
 
 async function main() {
 
