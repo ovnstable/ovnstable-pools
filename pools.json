@@ -3,12 +3,8 @@
     "Balancer": {
 
       "USDC-USD+ Linear Pool": {
-        "address": "0xCB21A9E647C95127ED784626485B3104Cb28d0e7",
-        "poolId": "0xcb21a9e647c95127ed784626485b3104cb28d0e7000000000000000000000425"
-      },
-      "Linear Pool USDC-USD+": {
-        "address": "0x1aAFc31091d93C3Ff003Cff5D2d8f7bA2e728425",
-        "poolId": "0x1AAFC31091D93C3FF003CFF5D2D8F7BA2E7284250000000000000000000003B3"
+        "address": "0x6933ec1CA55C06a894107860c92aCdFd2Dd8512f",
+        "poolId": "0x6933ec1ca55c06a894107860c92acdfd2dd8512f000000000000000000000428"
       },
       "Balancer USD+ StablePool": {
         "address": "0xE051605A83dEAe38d26a7346B100EF1AC2ef8a0b",

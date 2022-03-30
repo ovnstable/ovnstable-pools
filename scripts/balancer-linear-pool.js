@@ -18,9 +18,9 @@ async function main() {
     let factory = await ethers.getContractAt(BalancerFactory, BalancerFactoryAddress, wallet);
 
     let upperTarget = new BN(10).pow(new BN(18)).muln(200000); // 200 000
-    let swapFee = "100000000000000"; // 0.01%
+    let swapFee = "1000000000000000"; // 0.1%
 
-    let tx = await (await factory.create('USDC-USD+ Linear Pool Token', 'LP-USDC-USD+', mainToken, staticUsdPlusAddress, upperTarget.toString(), swapFee, owner, {
+    let tx = await (await factory.create('USDC-USD+ Linear Pool', 'USDC-USD+', mainToken, staticUsdPlusAddress, upperTarget.toString(), swapFee, owner, {
         maxFeePerGas: "250000000000",
         maxPriorityFeePerGas: "250000000000"
     })).wait();
