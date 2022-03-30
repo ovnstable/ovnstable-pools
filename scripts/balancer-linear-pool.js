@@ -8,7 +8,7 @@ let Pool = JSON.parse(fs.readFileSync('./abi/ERC4626LinearPool.json'));
 
 
 let BalancerFactoryAddress = "0xC6bD2497332d24094eC16a7261eec5C412B5a2C1";
-let staticUsdPlusAddress = "0x5a5C6AA6164750b530B8f7658b827163b3549A4D";
+let staticUsdPlusAddress = "0x5d9D8509C522a47D9285b9e4e9ec686e6A580850";
 let mainToken = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174";
 let owner = "0xe497285e466227f4e8648209e34b465daa1f90a0";
 
@@ -27,6 +27,7 @@ async function main() {
     const poolAddress = tx.events.find((e) => e.event == 'PoolCreated').args[0];
 
     let pool = await ethers.getContractAt(Pool, poolAddress, wallet);
+    console.log('Pool ID: ' + await pool.getPoolId());
     console.log('Pool address: ' + poolAddress);
 }
 
@@ -41,7 +42,7 @@ main()
 
 async function initWallet() {
 
-    let provider = new ethers.provider;
+    let provider = ethers.provider;
     console.log('Provider: ' + provider.connection.url);
     let wallet = await new ethers.Wallet(process.env.PK_POLYGON, provider);
     console.log('Wallet: ' + wallet.address);
