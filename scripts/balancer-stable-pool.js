@@ -20,6 +20,9 @@ let usdtAddress = "0xc2132d05d31c914a87c6611c10748aeb04b58e8f";
 let daiAddress = "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063";
 let lpUsdPlusAddress = "0x1aAFc31091d93C3Ff003Cff5D2d8f7bA2e728425";
 
+let lpDai = "0x0503Dd6b2D3Dd463c9BeF67fB5156870Af63393E";
+let lpUsdt = "0x8A819a4caBD6EfCb4E5504fE8679A1aBD831Dd8f";
+
 async function main() {
 
     let wallet = await initWallet();
@@ -37,12 +40,13 @@ async function createStablePool(wallet) {
     let factory = await ethers.getContractAt(BalancerFactory, BalancerFactoryAddress, wallet);
 
 
-    let tokens = [usdtAddress, daiAddress, lpUsdPlusAddress];
+    let tokens = [lpUsdt, lpDai, lpUsdPlusAddress];
     tokens.sort((tokenA, tokenB) => (tokenA.toLowerCase() > tokenB.toLowerCase() ? 1 : -1));
 
-    let rateProviders = [lpUsdPlusAddress, "0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000"];
 
-    let tokenRateCacheDurations = [1800, 0, 0];
+    let rateProviders = [lpDai, lpUsdPlusAddress, lpUsdt];
+
+    let tokenRateCacheDurations = [1800, 1800, 1800];
 
     console.log(tokens);
     console.log(rateProviders);
@@ -53,7 +57,7 @@ async function createStablePool(wallet) {
 
     let promise = await factory.create(
         'Balancer USD+ StablePool',
-        'SP-USDT/DAI/LP-USD+',
+        'bb-USD+',
         tokens,
         amplificationParameter.toString(),
         rateProviders,
@@ -77,6 +81,9 @@ async function showBalances(vault, pool) {
     const {tokens, balances} = await vault.getPoolTokens(await pool.getPoolId());
 
     console.log('Balance Stable Pool:')
+    console.log('Tokens:   ' + tokens);
+    console.log('Balances: ' + balances);
+
 
     for (let i = 0; i < tokens.length; i++) {
         let token = tokens[i];
@@ -102,7 +109,7 @@ async function showBalances(vault, pool) {
 
         }
 
-        console.log(`- ${name}:${balance}`);
+        // console.log(`- ${name}:${balance}`);
     }
 
 }

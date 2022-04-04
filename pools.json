@@ -1,7 +1,12 @@
 {
   "Polygon": {
-    "Balancer": {
 
+
+    "Balancer": {
+      "Balancer USD+ StablePool (new)": {
+        "address": "0xB973Ca96a3f0D61045f53255E319AEDb6ED49240",
+        "poolId": "0xb973ca96a3f0d61045f53255e319aedb6ed4924000000000000000000000042f"
+      },
       "USDC-USD+ Linear Pool": {
         "address": "0x6933ec1CA55C06a894107860c92aCdFd2Dd8512f",
         "poolId": "0x6933ec1ca55c06a894107860c92acdfd2dd8512f000000000000000000000428"
