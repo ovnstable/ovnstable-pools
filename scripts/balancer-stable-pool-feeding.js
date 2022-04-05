@@ -13,7 +13,7 @@ let usdtAddress = "0x8A819a4caBD6EfCb4E5504fE8679A1aBD831Dd8f";
 let daiAddress = "0x0503Dd6b2D3Dd463c9BeF67fB5156870Af63393E";
 let lpUsdPlusAddress = "0x1aAFc31091d93C3Ff003Cff5D2d8f7bA2e728425";
 
-let stablePoolAddress = "0xB973Ca96a3f0D61045f53255E319AEDb6ED49240";
+let stablePoolAddress = "0xF48f01DCB2CbB3ee1f6AaB0e742c2D3941039d56";
 
 let price = { maxFeePerGas: "100000000000", maxPriorityFeePerGas: "100000000000" };
 
