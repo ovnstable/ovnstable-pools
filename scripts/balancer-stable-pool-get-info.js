@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const fs = require("fs");
 const ethers = hre.ethers;
 const {fromE18} = require("../utils/decimals");
+const {initWallet} = require("../utils/network");
 
 
 let LinearPool = JSON.parse(fs.readFileSync('./abi/ERC4626LinearPool.json'));
@@ -16,7 +17,7 @@ let stablePoolAddress = "0xF48f01DCB2CbB3ee1f6AaB0e742c2D3941039d56";
 
 async function main() {
 
-    let wallet = await initWallet();
+    let wallet = await initWallet(ethers);
 
     let stablePool = await ethers.getContractAt(StablePhantomPool, stablePoolAddress, wallet);
     let linearPoolUsdPlus = await ethers.getContractAt(LinearPool, linearPoolUsdPlusAddress, wallet);
@@ -39,15 +40,3 @@ main()
         console.error(error);
         process.exit(1);
     });
-
-async function initWallet() {
-
-    let provider = ethers.provider;
-    console.log('Provider: ' + provider.connection.url);
-    let wallet = await new ethers.Wallet(process.env.PK_POLYGON, provider);
-    console.log('Wallet: ' + wallet.address);
-    const balance = await provider.getBalance(wallet.address);
-    console.log('Balance: ' + balance / 1e18);
-
-    return wallet;
-}

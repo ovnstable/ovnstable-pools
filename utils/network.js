@@ -73,9 +73,21 @@ function blockNumber(){
     return blockNumber;
 }
 
+async function initWallet(ethers) {
+    let provider = ethers.provider;
+    console.log('Provider: ' + provider.connection.url);
+    let wallet = await new ethers.Wallet(process.env.PK_POLYGON, provider);
+    console.log('Wallet: ' + wallet.address);
+    const balance = await provider.getBalance(wallet.address);
+    console.log('Balance: ' + balance / 1e18);
+
+    return wallet;
+}
+
 module.exports = {
-    node_url: node_url,
-    accounts: accounts,
-    getGasPrice: getGasPrice,
-    blockNumber: blockNumber,
+    node_url,
+    accounts,
+    getGasPrice,
+    blockNumber,
+    initWallet
 }
