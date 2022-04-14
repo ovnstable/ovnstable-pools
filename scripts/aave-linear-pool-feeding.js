@@ -19,7 +19,6 @@ let Pool = JSON.parse(fs.readFileSync('./abi/AaveLinearPool.json'));
 // - Impl :  0x692AeF68A9c106FE470D69Ec0B28ef5b563B65a2
 
 
-
 let poolUSDT = "0x8A819a4caBD6EfCb4E5504fE8679A1aBD831Dd8f";
 let poolDAI = "0x0503Dd6b2D3Dd463c9BeF67fB5156870Af63393E"
 
@@ -50,8 +49,7 @@ async function main() {
     await putDAI();
     await putUSDT();
 
-    async function putDAI(){
-
+    async function putDAI() {
 
         console.log('1: Balance DAI: ' + await dai.balanceOf(wallet.address) / 1e18);
         console.log('1: Balance StaticDAI: ' + await staticAmDAI.balanceOf(wallet.address) / 1e18);
@@ -70,70 +68,20 @@ async function main() {
         })).wait();
 
 
-        await (await dai.approve(vault.address, amount, {
-            maxFeePerGas: "250000000000",
-            maxPriorityFeePerGas: "250000000000"
-        })).wait();
-
-        await (await vault.swap(
-            {
-                poolId: await poolDai.getPoolId(),
-                kind: 0,
-                assetIn: dai.address,
-                assetOut: poolDai.address,
-                amount: amount,
-                userData: "0x",
-            },
-            {
-                sender: wallet.address,
-                fromInternalBalance: false,
-                recipient: wallet.address,
-                toInternalBalance: false,
-            },
-            0,
-            1000000000000,
-            {maxFeePerGas: "250000000000", maxPriorityFeePerGas: "250000000000"}
-        )).wait();
-
+        await swap(dai, poolDai, amount, await poolDai.getPoolId())
 
         console.log('2: Balance DAI: ' + await dai.balanceOf(wallet.address) / 1e18);
         console.log('2: Balance StaticDAI: ' + await staticAmDAI.balanceOf(wallet.address) / 1e18);
         console.log('2: Balance LP DAI: ' + await poolDai.balanceOf(wallet.address) / 1e18);
 
-
-        await (await staticAmDAI.approve(vault.address, await staticAmDAI.balanceOf(wallet.address), {
-            maxFeePerGas: "250000000000",
-            maxPriorityFeePerGas: "250000000000"
-        })).wait();
-
-        await (await vault.swap(
-            {
-                poolId: await poolDai.getPoolId(),
-                kind: 0,
-                assetIn: staticAmDAI.address,
-                assetOut: poolDai.address,
-                amount: await staticAmDAI.balanceOf(wallet.address),
-                userData: "0x",
-            },
-            {
-                sender: wallet.address,
-                fromInternalBalance: false,
-                recipient: wallet.address,
-                toInternalBalance: false,
-            },
-            0,
-            1000000000000,
-            {maxFeePerGas: "250000000000", maxPriorityFeePerGas: "250000000000"}
-        )).wait();
-
+        await swap(staticAmDAI, poolDai, await staticAmDAI.balanceOf(wallet.address), await poolDai.getPoolId())
 
         console.log('3: Balance DAI: ' + await dai.balanceOf(wallet.address) / 1e18);
         console.log('3: Balance StaticDAI: ' + await staticAmDAI.balanceOf(wallet.address) / 1e18);
         console.log('3: Balance LP DAI: ' + await poolDai.balanceOf(wallet.address) / 1e18);
     }
 
-    async function putUSDT(){
-
+    async function putUSDT() {
 
         console.log('1: Balance USDT: ' + await usdt.balanceOf(wallet.address) / 1e6);
         console.log('1: Balance StaticUSDT: ' + await staticAmUSDT.balanceOf(wallet.address) / 1e6);
@@ -152,17 +100,32 @@ async function main() {
         })).wait();
 
 
-        await (await usdt.approve(vault.address, amount, {
+        await swap(usdt, poolUsdt, amount, await poolUsdt.getPoolId())
+
+        console.log('2: Balance USDT: ' + await usdt.balanceOf(wallet.address) / 1e6);
+        console.log('2: Balance StaticUSDT: ' + await staticAmUSDT.balanceOf(wallet.address) / 1e6);
+        console.log('2: Balance LP USDT: ' + await poolUsdt.balanceOf(wallet.address) / 1e18);
+
+        await swap(staticAmUSDT, poolUsdt, await staticAmUSDT.balanceOf(wallet.address), await poolUsdt.getPoolId())
+
+        console.log('3: Balance USDT: ' + await usdt.balanceOf(wallet.address) / 1e6);
+        console.log('3: Balance StaticUSDT: ' + await staticAmUSDT.balanceOf(wallet.address) / 1e6);
+        console.log('3: Balance LP USDT: ' + await poolUsdt.balanceOf(wallet.address) / 1e18);
+    }
+
+    async function swap(tokenIn, tokenOut, amount, poolId) {
+
+        await (await tokenIn.approve(vault.address, amount, {
             maxFeePerGas: "250000000000",
             maxPriorityFeePerGas: "250000000000"
         })).wait();
 
         await (await vault.swap(
             {
-                poolId: await poolUsdt.getPoolId(),
+                poolId: poolId,
                 kind: 0,
-                assetIn: usdt.address,
-                assetOut: poolUsdt.address,
+                assetIn: tokenIn.address,
+                assetOut: tokenOut.address,
                 amount: amount,
                 userData: "0x",
             },
@@ -176,48 +139,8 @@ async function main() {
             1000000000000,
             {maxFeePerGas: "250000000000", maxPriorityFeePerGas: "250000000000"}
         )).wait();
-
-
-        console.log('2: Balance USDT: ' + await usdt.balanceOf(wallet.address) / 1e6);
-        console.log('2: Balance StaticUSDT: ' + await staticAmUSDT.balanceOf(wallet.address) / 1e6);
-        console.log('2: Balance LP USDT: ' + await poolUsdt.balanceOf(wallet.address) / 1e18);
-
-
-        await (await staticAmUSDT.approve(vault.address, await staticAmUSDT.balanceOf(wallet.address), {
-            maxFeePerGas: "250000000000",
-            maxPriorityFeePerGas: "250000000000"
-        })).wait();
-
-        await (await vault.swap(
-            {
-                poolId: await poolUsdt.getPoolId(),
-                kind: 0,
-                assetIn: staticAmUSDT.address,
-                assetOut: poolUsdt.address,
-                amount: await staticAmUSDT.balanceOf(wallet.address),
-                userData: "0x",
-            },
-            {
-                sender: wallet.address,
-                fromInternalBalance: false,
-                recipient: wallet.address,
-                toInternalBalance: false,
-            },
-            0,
-            1000000000000,
-            {maxFeePerGas: "250000000000", maxPriorityFeePerGas: "250000000000"}
-        )).wait();
-
-
-        console.log('3: Balance USDT: ' + await usdt.balanceOf(wallet.address) / 1e6);
-        console.log('3: Balance StaticUSDT: ' + await staticAmUSDT.balanceOf(wallet.address) / 1e6);
-        console.log('3: Balance LP USDT: ' + await poolUsdt.balanceOf(wallet.address) / 1e18);
     }
 }
-
-
-
-
 
 
 main()
