@@ -3,6 +3,7 @@ const fs = require("fs");
 const ethers = hre.ethers;
 const BN = require('bn.js');
 const {web3} = require("@openzeppelin/test-helpers/src/setup");
+const {initWallet} = require("../utils/network");
 
 let Pool = JSON.parse(fs.readFileSync('./abi/StablePhantomPool.json'));
 let Vault = JSON.parse(fs.readFileSync('./abi/VaultBalancer.json'));
@@ -19,7 +20,7 @@ let price = { maxFeePerGas: "100000000000", maxPriorityFeePerGas: "100000000000"
 
 async function main() {
 
-    let wallet = await initWallet();
+    let wallet = await initWallet(ethers);
 
     let stablePool = await ethers.getContractAt(Pool, stablePoolAddress, wallet);
     let vault = await ethers.getContractAt(Vault, "0xba12222222228d8ba445958a75a0704d566bf2c8", wallet);
@@ -164,15 +165,3 @@ main()
         console.error(error);
         process.exit(1);
     });
-
-async function initWallet() {
-
-    let provider = ethers.provider;
-    console.log('Provider: ' + provider.connection.url);
-    let wallet = await new ethers.Wallet(process.env.PK_POLYGON, provider);
-    console.log('Wallet: ' + wallet.address);
-    const balance = await provider.getBalance(wallet.address);
-    console.log('Balance: ' + balance / 1e18);
-
-    return wallet;
-}

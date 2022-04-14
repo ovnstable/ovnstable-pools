@@ -3,6 +3,7 @@ const fs = require("fs");
 const ethers = hre.ethers;
 const BN = require('bn.js');
 const {expect} = require("chai");
+const {initWallet} = require("../utils/network");
 
 
 let Pool = JSON.parse(fs.readFileSync('./abi/StablePhantomPool.json'));
@@ -20,7 +21,7 @@ let ONE_LP = "1000000000000000000";
 
 async function main() {
 
-    let wallet = await initWallet();
+    let wallet = await initWallet(ethers);
     let poolAddress = "0xE051605A83dEAe38d26a7346B100EF1AC2ef8a0b";
 
     let stablePool = await ethers.getContractAt(Pool, poolAddress, wallet);
@@ -326,14 +327,3 @@ main()
         process.exit(1);
     });
 
-async function initWallet() {
-
-    let provider = ethers.provider;
-    console.log('Provider: ' + provider.connection.url);
-    let wallet = await new ethers.Wallet(process.env.PK_POLYGON, provider);
-    console.log('Wallet: ' + wallet.address);
-    const balance = await provider.getBalance(wallet.address);
-    console.log('Balance: ' + balance / 1e18);
-
-    return wallet;
-}

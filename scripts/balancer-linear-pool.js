@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const fs = require("fs");
 const ethers = hre.ethers;
 const BN = require('bn.js');
+const {initWallet} = require("../utils/network");
 
 let BalancerFactory = JSON.parse(fs.readFileSync('./abi/ERC4626LinearPoolFactory.json'));
 let Pool = JSON.parse(fs.readFileSync('./abi/ERC4626LinearPool.json'));
@@ -14,7 +15,7 @@ let owner = "0xe497285e466227f4e8648209e34b465daa1f90a0";
 
 async function main() {
 
-    let wallet = await initWallet();
+    let wallet = await initWallet(ethers);
     let factory = await ethers.getContractAt(BalancerFactory, BalancerFactoryAddress, wallet);
 
     let upperTarget = new BN(10).pow(new BN(18)).muln(200000); // 200 000
@@ -39,15 +40,3 @@ main()
         console.error(error);
         process.exit(1);
     });
-
-async function initWallet() {
-
-    let provider = ethers.provider;
-    console.log('Provider: ' + provider.connection.url);
-    let wallet = await new ethers.Wallet(process.env.PK_POLYGON, provider);
-    console.log('Wallet: ' + wallet.address);
-    const balance = await provider.getBalance(wallet.address);
-    console.log('Balance: ' + balance / 1e18);
-
-    return wallet;
-}

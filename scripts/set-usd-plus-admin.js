@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const fs = require("fs");
 const {fromE18, fromOvnGov, toUSDC, fromUSDC} = require("../utils/decimals");
 const {expect} = require("chai");
+const {initWallet} = require("../utils/network");
 const ethers = hre.ethers;
 
 
@@ -15,7 +16,7 @@ const proposalStates = ['Pending', 'Active', 'Canceled', 'Defeated', 'Succeeded'
 
 async function main() {
 
-    let wallet = await initWallet();
+    let wallet = await initWallet(ethers);
 
     let usdPlus = await ethers.getContractAt(UsdPlusToken.abi, UsdPlusToken.address, wallet);
     let governor = await ethers.getContractAt(OvnGovernor.abi, OvnGovernor.address);
@@ -51,19 +52,6 @@ async function main() {
 
 }
 
-
-async function initWallet() {
-
-    let provider = ethers.provider;
-    console.log('Provider: ' + provider.connection.url);
-
-    let wallet = await new ethers.Wallet(process.env.PK_POLYGON, provider);
-    console.log('Wallet: ' + wallet.address);
-    const balance = await provider.getBalance(wallet.address);
-    console.log('Balance wallet: ' + fromE18(balance));
-
-    return wallet;
-}
 
 async function execProposal(governator, ovn, id, wallet) {
 

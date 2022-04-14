@@ -2,12 +2,10 @@ const hre = require("hardhat");
 const fs = require("fs");
 const ethers = hre.ethers;
 const BN = require('bn.js');
-const {expect} = require("chai");
 const {evmCheckpoint, evmRestore} = require("../utils/sharedBeforeEach")
-const {writeFileSync} = require("fs");
 const ExcelJS = require('exceljs');
-const {ValueType} = require("exceljs");
 const {balances, upByDecimals, str} = require("./balancer-stable-pool-test-commons");
+const {initWallet} = require("../utils/network");
 
 
 let LinearPool = JSON.parse(fs.readFileSync('./abi/ERC4626LinearPool.json'));
@@ -35,7 +33,7 @@ let random = sfc32(seed(), seed(), seed(), seed());
 
 async function main() {
 
-    let wallet = await initWallet();
+    let wallet = await initWallet(ethers);
 
     let stablePool = await ethers.getContractAt(StablePhantomPool, stablePoolAddress, wallet);
     let linearPool = await ethers.getContractAt(LinearPool, linearPoolAddress, wallet);
@@ -380,18 +378,6 @@ main()
         console.error(error);
         process.exit(1);
     });
-
-async function initWallet() {
-
-    let provider = ethers.provider;
-    console.log('Provider: ' + provider.connection.url);
-    let wallet = await new ethers.Wallet(process.env.PK_POLYGON, provider);
-    console.log('Wallet: ' + wallet.address);
-    const balance = await provider.getBalance(wallet.address);
-    console.log('Balance: ' + balance / 1e18);
-
-    return wallet;
-}
 
 
 function xmur3(str) {

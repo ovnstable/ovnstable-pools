@@ -1,4 +1,5 @@
 const dotenv = require('dotenv');
+const {fromE18} = require("./decimals");
 dotenv.config();
 
 function node_url(networkName) {
@@ -79,7 +80,8 @@ async function initWallet(ethers) {
     let wallet = await new ethers.Wallet(process.env.PK_POLYGON, provider);
     console.log('Wallet: ' + wallet.address);
     const balance = await provider.getBalance(wallet.address);
-    console.log('Balance: ' + balance / 1e18);
+    console.log('Balance wallet: ' + fromE18(balance));
+    console.log('--------------------');
 
     return wallet;
 }

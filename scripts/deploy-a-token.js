@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const fs = require("fs");
 const ethers = hre.ethers;
 const BN = require('bn.js');
+const {initWallet} = require("../utils/network");
 
 let StaticATokenLM = JSON.parse(fs.readFileSync('./abi/StaticATokenLM.json'));
 
@@ -17,7 +18,7 @@ let StaticATokenLM = JSON.parse(fs.readFileSync('./abi/StaticATokenLM.json'));
 
 async function main() {
 
-    let wallet = await initWallet();
+    let wallet = await initWallet(ethers);
 
     let staticFactory = await ethers.getContractFactory(StaticATokenLM.abi, StaticATokenLM.bytecode, wallet);
 
@@ -51,15 +52,3 @@ main()
         console.error(error);
         process.exit(1);
     });
-
-async function initWallet() {
-
-    let provider = ethers.provider;
-    console.log('Provider: ' + provider.connection.url);
-    let wallet = await new ethers.Wallet(process.env.PK_POLYGON, provider);
-    console.log('Wallet: ' + wallet.address);
-    const balance = await provider.getBalance(wallet.address);
-    console.log('Balance: ' + balance / 1e18);
-
-    return wallet;
-}

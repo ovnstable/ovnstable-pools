@@ -1,6 +1,7 @@
 const {fromE18} = require("../utils/decimals");
 const hre = require("hardhat");
 const fs = require("fs");
+const {initWallet} = require("../utils/network");
 const ethers = hre.ethers;
 
 let IUniswapV2Router02 = JSON.parse(fs.readFileSync('./abi/IUniswapV2Router02.json'));
@@ -14,7 +15,7 @@ let usdcAddress = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174";
 
 async function main() {
 
-    let mainWallet = await initWallet();
+    let mainWallet = await initWallet(ethers);
     let hardhatWallet = await initHardhatWallet();
 
     let usdc = await ethers.getContractAt(ERC20, usdcAddress, mainWallet);
@@ -87,15 +88,3 @@ async function initHardhatWallet() {
     return wallet;
 }
 
-async function initWallet() {
-
-    let provider = ethers.provider;
-    console.log('Provider: ' + provider.connection.url);
-
-    let wallet = await new ethers.Wallet(process.env.PK_POLYGON, provider);
-    console.log('Wallet: ' + wallet.address);
-    const balance = await provider.getBalance(wallet.address);
-    console.log('Balance wallet: ' + fromE18(balance));
-
-    return wallet;
-}
