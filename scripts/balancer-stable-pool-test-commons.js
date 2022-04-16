@@ -90,6 +90,17 @@ function str(value) {
     return value.toString();
 }
 
+function strPoint(value, decimals) {
+    let strValue = str(value);
+    if (strValue.length < decimals) {
+        return "0." + strValue.padStart(decimals, '0')
+    } else {
+        return strValue.slice(0, strValue.length - decimals) +
+            "." +
+            strValue.slice(strValue.length - decimals, strValue.length);
+    }
+}
+
 
 function unscaleFrom18(value, decimals) {
     return value.div(new BN(10).pow(new BN(18).sub(decimals)));
@@ -97,6 +108,10 @@ function unscaleFrom18(value, decimals) {
 
 function scaleTo18(value, decimals) {
     return value.mul(new BN(10).pow(new BN(18).sub(decimals)));
+}
+
+function toE18(value) {
+    return new BN(10).pow(new BN(18)).muln(value);
 }
 
 
@@ -107,11 +122,13 @@ function addr(token) {
 
 module.exports = {
     str,
+    strPoint,
     balances,
     walletBalances,
     poolBalances,
     upByDecimals,
     unscaleFrom18,
     scaleTo18,
+    toE18,
     addr
 }

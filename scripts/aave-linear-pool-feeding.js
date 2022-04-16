@@ -46,16 +46,20 @@ async function main() {
     let staticAmDAI = await ethers.getContractAt(StaticATokenLM.abi, staticAmDAIAddress, wallet);
     let dai = await ethers.getContractAt(ERC20, DAI, wallet);
 
+    let amountInDai = 50000;
+    let amountInUsdt = 50000;
+
     await putDAI();
     await putUSDT();
 
     async function putDAI() {
+        let poolId = await poolDai.getPoolId();
 
         console.log('1: Balance DAI: ' + await dai.balanceOf(wallet.address) / 1e18);
         console.log('1: Balance StaticDAI: ' + await staticAmDAI.balanceOf(wallet.address) / 1e18);
         console.log('1: Balance LP DAI: ' + await poolDai.balanceOf(wallet.address) / 1e18);
 
-        let amount = new BN(10).pow(new BN(18)).muln(2).toString();
+        let amount = new BN(10).pow(new BN(18)).muln(amountInDai).toString();
         let convertedAmount = await staticAmDAI.staticToDynamicAmount(amount);
         await (await dai.approve(staticAmDAI.address, convertedAmount, {
             maxFeePerGas: "250000000000",
@@ -68,13 +72,13 @@ async function main() {
         })).wait();
 
 
-        await swap(dai, poolDai, amount, await poolDai.getPoolId())
+        await swap(dai, poolDai, amount, poolId)
 
         console.log('2: Balance DAI: ' + await dai.balanceOf(wallet.address) / 1e18);
         console.log('2: Balance StaticDAI: ' + await staticAmDAI.balanceOf(wallet.address) / 1e18);
         console.log('2: Balance LP DAI: ' + await poolDai.balanceOf(wallet.address) / 1e18);
 
-        await swap(staticAmDAI, poolDai, await staticAmDAI.balanceOf(wallet.address), await poolDai.getPoolId())
+        await swap(staticAmDAI, poolDai, await staticAmDAI.balanceOf(wallet.address), poolId)
 
         console.log('3: Balance DAI: ' + await dai.balanceOf(wallet.address) / 1e18);
         console.log('3: Balance StaticDAI: ' + await staticAmDAI.balanceOf(wallet.address) / 1e18);
@@ -82,12 +86,13 @@ async function main() {
     }
 
     async function putUSDT() {
+        let poolId = await poolUsdt.getPoolId();
 
         console.log('1: Balance USDT: ' + await usdt.balanceOf(wallet.address) / 1e6);
         console.log('1: Balance StaticUSDT: ' + await staticAmUSDT.balanceOf(wallet.address) / 1e6);
         console.log('1: Balance LP USDT: ' + await poolUsdt.balanceOf(wallet.address) / 1e18);
 
-        let amount = new BN(10).pow(new BN(6)).muln(2).toString();
+        let amount = new BN(10).pow(new BN(6)).muln(amountInUsdt).toString();
         let convertedAmount = await staticAmUSDT.staticToDynamicAmount(amount);
         await (await usdt.approve(staticAmUSDT.address, convertedAmount, {
             maxFeePerGas: "250000000000",
@@ -100,13 +105,13 @@ async function main() {
         })).wait();
 
 
-        await swap(usdt, poolUsdt, amount, await poolUsdt.getPoolId())
+        await swap(usdt, poolUsdt, amount, poolId)
 
         console.log('2: Balance USDT: ' + await usdt.balanceOf(wallet.address) / 1e6);
         console.log('2: Balance StaticUSDT: ' + await staticAmUSDT.balanceOf(wallet.address) / 1e6);
         console.log('2: Balance LP USDT: ' + await poolUsdt.balanceOf(wallet.address) / 1e18);
 
-        await swap(staticAmUSDT, poolUsdt, await staticAmUSDT.balanceOf(wallet.address), await poolUsdt.getPoolId())
+        await swap(staticAmUSDT, poolUsdt, await staticAmUSDT.balanceOf(wallet.address), poolId)
 
         console.log('3: Balance USDT: ' + await usdt.balanceOf(wallet.address) / 1e6);
         console.log('3: Balance StaticUSDT: ' + await staticAmUSDT.balanceOf(wallet.address) / 1e6);

@@ -48,36 +48,15 @@ async function main() {
     let amountStUsdPlusToLpScaled = new BN(10).pow(new BN(6)).muln(amountStUsdPlusToLp).toString();
 
     let pool = await ethers.getContractAt(Pool, poolAddress, wallet);
+    let poolId = await pool.getPoolId();
 
     let targets = await pool.getTargets();
-    let balances = await vault.getPoolTokens(await pool.getPoolId());
+    let balances = await vault.getPoolTokens(poolId);
 
     console.log(`2: Targets: lower: ${targets[0].toString()} upper: ${targets[1].toString()}`);
     console.log(`2: Balances: ${balances[0].toString()} : ${balances[1].toString()}`);
-    await (await usdc.approve(vault.address, amountUsdcToLpScaled, {
-        maxFeePerGas: "250000000000",
-        maxPriorityFeePerGas: "250000000000"
-    })).wait();
 
-    await (await vault.swap(
-        {
-            poolId: await pool.getPoolId(),
-            kind: 0,
-            assetIn: usdc.address,
-            assetOut: poolAddress,
-            amount: amountUsdcToLpScaled,
-            userData: "0x",
-        },
-        {
-            sender: wallet.address,
-            fromInternalBalance: false,
-            recipient: wallet.address,
-            toInternalBalance: false,
-        },
-        0,
-        1000000000000,
-        {maxFeePerGas: "250000000000", maxPriorityFeePerGas: "250000000000"}
-    )).wait();
+    await swap(usdc, pool, amountUsdcToLpScaled, poolId)
 
     console.log('3: Balance USD+: ' + await usdPlus.balanceOf(wallet.address) / 1e6);
     console.log('3: Balance USDC: ' + await usdc.balanceOf(wallet.address) / 1e6);
@@ -85,36 +64,12 @@ async function main() {
     console.log('3: Balance Pool LP: ' + await pool.balanceOf(wallet.address) / 1e18);
 
     targets = await pool.getTargets();
-    balances = await vault.getPoolTokens(await pool.getPoolId());
+    balances = await vault.getPoolTokens(poolId);
 
     console.log(`3: Targets: lower: ${targets[0].toString()} upper: ${targets[1].toString()}`);
     console.log(`3: Balances: ${balances[0].toString()} : ${balances[1].toString()}`);
 
-
-    await (await staticUsdPlus.approve(vault.address, amountStUsdPlusToLpScaled, {
-            maxFeePerGas: "250000000000",
-            maxPriorityFeePerGas: "250000000000"
-        })
-    ).wait();
-    await (await vault.swap(
-        {
-            poolId: await pool.getPoolId(),
-            kind: 0,
-            assetIn: staticUsdPlus.address,
-            assetOut: poolAddress,
-            amount: amountStUsdPlusToLpScaled,
-            userData: "0x",
-        },
-        {
-            sender: wallet.address,
-            fromInternalBalance: false,
-            recipient: wallet.address,
-            toInternalBalance: false,
-        },
-        0,
-        1000000000000,
-        {maxFeePerGas: "250000000000", maxPriorityFeePerGas: "250000000000"}
-    )).wait();
+    await swap(staticUsdPlus, pool, amountStUsdPlusToLpScaled, poolId)
 
 
     console.log('4: Balance USD+: ' + await usdPlus.balanceOf(wallet.address) / 1e6);
@@ -123,11 +78,39 @@ async function main() {
     console.log('4: Balance Pool LP: ' + await pool.balanceOf(wallet.address) / 1e18);
 
     targets = await pool.getTargets();
-    balances = await vault.getPoolTokens(await pool.getPoolId());
+    balances = await vault.getPoolTokens(poolId);
 
     console.log(`4: Targets: lower: ${targets[0].toString()} upper: ${targets[1].toString()}`);
     console.log(`4: Balances: ${balances[0].toString()} : ${balances[1].toString()}`);
 
+
+    async function swap(tokenIn, tokenOut, amount, poolId) {
+
+        await (await tokenIn.approve(vault.address, amount, {
+            maxFeePerGas: "250000000000",
+            maxPriorityFeePerGas: "250000000000"
+        })).wait();
+
+        await (await vault.swap(
+            {
+                poolId: poolId,
+                kind: 0,
+                assetIn: tokenIn.address,
+                assetOut: tokenOut.address,
+                amount: amount,
+                userData: "0x",
+            },
+            {
+                sender: wallet.address,
+                fromInternalBalance: false,
+                recipient: wallet.address,
+                toInternalBalance: false,
+            },
+            0,
+            1000000000000,
+            {maxFeePerGas: "250000000000", maxPriorityFeePerGas: "250000000000"}
+        )).wait();
+    }
 
 }
 
