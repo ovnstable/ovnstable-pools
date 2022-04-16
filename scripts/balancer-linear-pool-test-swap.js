@@ -59,8 +59,8 @@ async function main() {
     //
     let aUsdtAmount = 5000 * 1e6;
     await printBalances(vault, linearPoolAUsdt);
-    // await swap(usdt, staticAmUSDT, 5000 * 1e6, linearPoolAUsdt)
-    await swap(staticAmUSDT, usdt, 5000 * 1e6, linearPoolAUsdt)
+    // await swap(usdt, staticAmUSDT, aUsdtAmount, linearPoolAUsdt)
+    await swap(staticAmUSDT, usdt, aUsdtAmount, linearPoolAUsdt)
     await printBalances(vault, linearPoolAUsdt);
 
 
