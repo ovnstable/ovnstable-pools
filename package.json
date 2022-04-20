@@ -24,6 +24,7 @@
     "@openzeppelin/contracts": "^4.4.0",
     "@openzeppelin/contracts-upgradeable": "^4.4.0",
     "@openzeppelin/test-helpers": "^0.5.15",
+    "@thanpolas/univ3prices": "^3.0.2",
     "@truffle/hdwallet-provider": "^1.5.0",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "@uniswap/v3-core": "^1.0.0",
