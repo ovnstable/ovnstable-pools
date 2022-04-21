@@ -25,13 +25,21 @@ let uniV3PoolUsdcWethAddress = "0x45dda9cb7c25131df268515131f647d726f50608"
 let qsPoolWmaticUsdcAddress = "0x6e7a5FAFcec6BB1e78bAE2A1F0B612012BF14827"
 let qsPoolUsdcWethAddress = "0x853Ee4b2A13f8a742d64C8F088bE7bA2131f670d"
 
+// replace addresses from create script
+let qsPoolWmaticUsdPlusAddress = "0x91F670270B86C80Ec92bB6B5914E6532cA967bFB";
+let qsPoolUsdPlusWethAddress = "0x901Debb34469e89FeCA591f5E5336984151fEc39";
+
 
 async function main() {
 
     let wallet = await initWallet(ethers);
     let qsFactory = await ethers.getContractAt(iUniswapV2FactoryAbi, qsFactoryAddress, wallet);
+
     let qsPoolWmaticUsdc = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolWmaticUsdcAddress, wallet);
     let qsPoolUsdcWeth = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolUsdcWethAddress, wallet);
+
+    let qsPoolWmaticUsdPlus = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolWmaticUsdPlusAddress, wallet);
+    let qsPoolUsdPlusWeth = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolUsdPlusWethAddress, wallet);
 
     let uniV3PoolWmaticUsdc = await ethers.getContractAt(iUniswapV3PoolAbi, uniV3PoolWmaticUsdcAddress, wallet);
     let uniV3PoolUsdcWeth = await ethers.getContractAt(iUniswapV3PoolAbi, uniV3PoolUsdcWethAddress, wallet);
@@ -48,6 +56,8 @@ async function main() {
     console.log(`pairWmaticUsdc address: ${qsPairWmaticUsdc}`);
     console.log(`pairUsdcWeth address:   ${qsPairUsdcWeth}`);
     console.log(`-------------------------------------`)
+    console.log(`qsFactory feeTo:   ${await qsFactory.feeTo()}`);
+    console.log(`-------------------------------------`)
 
     await printBalancesQsPool(qsPoolWmaticUsdc);
     await printBalancesQsPool(qsPoolUsdcWeth);
@@ -55,11 +65,14 @@ async function main() {
     await printBalancesUniV3(uniV3PoolWmaticUsdc);
     await printBalancesUniV3(uniV3PoolUsdcWeth);
 
+    await printBalancesQsPool(qsPoolWmaticUsdPlus);
+    await printBalancesQsPool(qsPoolUsdPlusWeth);
+
 
     async function printBalancesUniV3(pool) {
 
-        let slotUsdcWeth = await pool.slot0();
-        let sqrtPriceX96UsdcWeth = slotUsdcWeth[0];
+        let slot = await pool.slot0();
+        let sqrtPriceX96 = slot[0];
         let liquidity = await pool.liquidity();
 
 
@@ -77,11 +90,11 @@ async function main() {
             await token1.decimals(),
         ];
 
-        let price0Per1 = univ3prices.sqrtPrice(tokenDecimals, sqrtPriceX96UsdcWeth).toFixed({
+        let price0Per1 = univ3prices.sqrtPrice(tokenDecimals, sqrtPriceX96).toFixed({
             reverse: false,
             decimalPlaces: 18,
         });
-        let price1Per0 = univ3prices.sqrtPrice(tokenDecimals, sqrtPriceX96UsdcWeth).toFixed({
+        let price1Per0 = univ3prices.sqrtPrice(tokenDecimals, sqrtPriceX96).toFixed({
             reverse: true,
             decimalPlaces: 18,
         });
@@ -117,51 +130,6 @@ async function main() {
         console.log(`price1Per0: ${price1Per0}`);
         console.log(`-------------------------------------`)
     }
-
-
-// https://medium.com/taipei-ethereum-meetup/uniswap-v3-features-explained-in-depth-178cfe45f223
-    function calculateAmounts(requiredPool) {
-        // Fee tier to tick cpacing
-        let tickSpacing = feeTierToTickSpacing(requiredPool.feeTier)
-
-        const tokenDecimals = [
-            requiredPool.token0.decimals,
-            requiredPool.token1.decimals
-        ]
-
-        // Get the reserves of Liquidity Pool.
-        return univ3prices.getAmountsForCurrentLiquidity(
-            tokenDecimals,
-            requiredPool.liquidity,
-            requiredPool.sqrtPrice,
-            tickSpacing,
-            {tickStep: 5}
-        )
-    }
-
-    /*
-        Convert fee tiers tick to a price
-
-        https://uniswap.org/whitepaper-v3.pdf
-        The initial fee tiers and tick spacings supported
-        are 0.05% (with a tick spacing of 10, approximately 0.10% between
-        initializable ticks), 0.30% (with a tick spacing of 60, approximately
-        0.60% between initializable ticks), and 1% (with a tick spacing of
-        200, approximately 2.02% between ticks
-    */
-    function feeTierToTickSpacing(feeTier) {
-        switch (feeTier) {
-            case 500:
-                return 10
-            case 3000:
-                return 60
-            case 10000:
-                return 200
-            default:
-                return 60
-        }
-    }
-
 
 }
 
