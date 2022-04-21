@@ -1,4 +1,3 @@
-const {fromE18} = require("../../utils/decimals");
 const hre = require("hardhat");
 const fs = require("fs");
 const {initWallet} = require("../../utils/network");
@@ -29,12 +28,7 @@ async function main() {
 
     let exchange = await ethers.getContractAt(Exchange.abi, Exchange.address, wallet);
 
-
-    console.log('[Balance before]')
-    console.log('WETH:   ' + await weth.balanceOf(wallet.address) / 1e18);
-    console.log('WMATIC: ' + await wmatic.balanceOf(wallet.address) / 1e18);
-    console.log('USDC:   ' + await usdc.balanceOf(wallet.address) / 1e6);
-    console.log('USD+:   ' + await usdPlus.balanceOf(wallet.address) / 1e6);
+    await printUserBalances("before");
 
     let router = await ethers.getContractAt(IUniswapV2Router02, qsRouterAddress, wallet);
 
@@ -64,11 +58,17 @@ async function main() {
     await usdc.approve(exchange.address, "201000000000"); // 201k
     await exchange.buy(usdc.address, "201000000000"); // 201k
 
-    console.log('\n[Balance after]')
-    console.log('WETH:   ' + await weth.balanceOf(wallet.address) / 1e18);
-    console.log('WMATIC: ' + await wmatic.balanceOf(wallet.address) / 1e18);
-    console.log('USDC:   ' + await usdc.balanceOf(wallet.address) / 1e6);
-    console.log('USD+:   ' + await usdPlus.balanceOf(wallet.address) / 1e6);
+    await printUserBalances("after");
+
+
+    async function printUserBalances(stage) {
+        console.log(`--- [Balance ${stage}]`)
+        console.log('WETH:      ' + await weth.balanceOf(wallet.address) / 1e18);
+        console.log('WMATIC:    ' + await wmatic.balanceOf(wallet.address) / 1e18);
+        console.log('USDC:      ' + await usdc.balanceOf(wallet.address) / 1e6);
+        console.log('USD+:      ' + await usdPlus.balanceOf(wallet.address) / 1e6);
+        console.log(`-------------------------------------`)
+    }
 
 }
 
