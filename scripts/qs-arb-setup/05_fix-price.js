@@ -73,22 +73,20 @@ async function main() {
     let exchange = await ethers.getContractAt(Exchange.abi, await usdPlus.exchange(), wallet);
 
 
+    let lowerChangePriceUsdPlusWeth = 0.9999; // 1 pp
+    let upperChangePriceUsdPlusWeth = 1.0001; // 1 pp
+    let lowerChangePriceWmaticUsdPlus = 0.9999; // 1 pp
+    let upperChangePriceWmaticUsdPlus = 1.0001; // 1 pp
+
+
     // await printUserBalances("before");
     await evmCheckpoint("default");
     try {
 
-
-        // let amountInUsdPlusToWeth = toE6(5000);
-        // await swap(uniV3PoolUsdcWeth, qsPoolUsdPlusWeth, usdPlus, weth, amountInUsdPlusToWeth);
-        //
-        // let amountInUsdPlusToWmatic = toE6(5000);
-        // await swap(uniV3PoolWmaticUsdc, qsPoolWmaticUsdPlus, usdPlus, wmatic, amountInUsdPlusToWmatic);
-        //
-        // let amountInWethToUsdPlus = toE18(1);
-        // await swap(uniV3PoolUsdcWeth, qsPoolUsdPlusWeth, weth, usdPlus, amountInWethToUsdPlus);
-
-
         // await fixUsdcWeth();
+        // await fixUsdcWeth();
+
+        await fixMaticUsdc();
         await fixMaticUsdc();
 
 
@@ -102,22 +100,30 @@ async function main() {
 
         // balances with prices fields
         let balancesCurrent = await balancesQsPool(qsPoolUsdPlusWeth);
-        let balancesTarget = await balancesQsPool(qsPoolUsdcWeth);
+        let balancesTarget = await getSampleTargetsUniV3(uniV3PoolUsdcWeth);
+
+        let currentPrice0Per1 = balancesCurrent.price0Per1
+        let targetPrice0Per1 = balancesTarget.price
+        console.log(`currentPrice0Per1: ${currentPrice0Per1}`)
+        console.log(`targetPrice0Per1 : ${targetPrice0Per1}`)
 
         // changePrice = (rA_0/rA_1)/(rB_0/rB_1);
-        let changePrice = balancesTarget.price0Per1 / balancesCurrent.price0Per1;
+        let changePrice = targetPrice0Per1 / currentPrice0Per1
         console.log(`changePrice: ${changePrice}`)
+
+        let lowerBound = lowerChangePriceUsdPlusWeth;
+        let upperBound = upperChangePriceUsdPlusWeth;
+        if (lowerBound < changePrice && changePrice < upperBound) {
+            console.log(`changePrice in bound ${lowerBound}-${upperBound}, skip actions`)
+            return;
+        }
 
         await printUserBalances("1");
 
-        // plain balances
-        balancesCurrent = await balancesQsPoolN(qsPoolUsdPlusWeth);
-        balancesTarget = await balancesQsPoolN(qsPoolUsdcWeth);
-
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
-        console.log(`balancesTarget.reserve0: ${balancesTarget.reserve0}`)
-        console.log(`balancesTarget.reserve1: ${balancesTarget.reserve1}`)
+        console.log(`balancesTarget.reserve0:  ${balancesTarget.reserve0}`)
+        console.log(`balancesTarget.reserve1:  ${balancesTarget.reserve1}`)
 
 
         let rCur0 = new BN(balancesCurrent.reserve0.toString());
@@ -134,6 +140,13 @@ async function main() {
             let [rIn0, rOut0, rIn1, rOut1] = [rCur1, rCur0, rTar1, rTar0]
 
             let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+            console.log(`aIn: ${aIn}`)
+
+            let E15 = new BN(10).pow(new BN(15));
+            if (aIn.lt(E15)) { // 0.001
+                console.log(`aIn too low, skip actions`)
+                return;
+            }
 
             let poolPrices = await prices(uniV3PoolUsdcWeth, qsPoolUsdcWeth);
 
@@ -153,6 +166,14 @@ async function main() {
             let [rIn0, rOut0, rIn1, rOut1] = [rCur0, rCur1, rTar0, rTar1]
 
             let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+            console.log(`aIn: ${aIn}`)
+
+            let E3 = new BN(10).pow(new BN(3));
+            if (aIn.lt(E3)) { // 0.001
+                console.log(`aIn too low, skip actions`)
+                return;
+            }
+
             let usdcForWrapping = calcAInForWrap(aIn);
 
             let usdPlusReceived = await wrap(usdcForWrapping);
@@ -160,7 +181,7 @@ async function main() {
             let usdcReceived = await swapU3(weth, usdc, wethReceived);
         }
 
-        balancesCurrent = await balancesQsPoolN(qsPoolUsdPlusWeth);
+        balancesCurrent = await balancesQsPool(qsPoolUsdPlusWeth);
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
 
@@ -172,22 +193,30 @@ async function main() {
 
         // balances with prices fields
         let balancesCurrent = await balancesQsPool(qsPoolWmaticUsdPlus);
-        let balancesTarget = await balancesQsPool(qsPoolWmaticUsdc);
+        let balancesTarget = await getSampleTargetsUniV3(uniV3PoolWmaticUsdc);
+
+        let currentPrice0Per1 = balancesCurrent.price0Per1
+        let targetPrice0Per1 = balancesTarget.price
+        console.log(`currentPrice0Per1: ${currentPrice0Per1}`)
+        console.log(`targetPrice0Per1 : ${targetPrice0Per1}`)
 
         // changePrice = (rA_0/rA_1)/(rB_0/rB_1);
-        let changePrice = balancesTarget.price0Per1 / balancesCurrent.price0Per1;
+        let changePrice = targetPrice0Per1 / currentPrice0Per1
         console.log(`changePrice: ${changePrice}`)
+
+        let lowerBound = lowerChangePriceWmaticUsdPlus;
+        let upperBound = upperChangePriceWmaticUsdPlus;
+        if (lowerBound < changePrice && changePrice < upperBound) {
+            console.log(`changePrice in bound ${lowerBound}-${upperBound}, skip actions`)
+            return;
+        }
 
         await printUserBalances("1");
 
-        // plain balances
-        balancesCurrent = await balancesQsPoolN(qsPoolWmaticUsdPlus);
-        balancesTarget = await balancesQsPoolN(qsPoolWmaticUsdc);
-
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
-        console.log(`balancesTarget.reserve0: ${balancesTarget.reserve0}`)
-        console.log(`balancesTarget.reserve1: ${balancesTarget.reserve1}`)
+        console.log(`balancesTarget.reserve0:  ${balancesTarget.reserve0}`)
+        console.log(`balancesTarget.reserve1:  ${balancesTarget.reserve1}`)
 
 
         let rCur0 = new BN(balancesCurrent.reserve0.toString());
@@ -204,6 +233,14 @@ async function main() {
             let [rIn0, rOut0, rIn1, rOut1] = [rCur1, rCur0, rTar1, rTar0]
 
             let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+            console.log(`aIn: ${aIn}`)
+
+            let E3 = new BN(10).pow(new BN(3));
+            if (aIn.lt(E3)) { // 0.001
+                console.log(`aIn too low, skip actions`)
+                return;
+            }
+
             let usdcForWrapping = calcAInForWrap(aIn);
 
             let usdPlusReceived = await wrap(usdcForWrapping);
@@ -215,6 +252,13 @@ async function main() {
             let [rIn0, rOut0, rIn1, rOut1] = [rCur0, rCur1, rTar0, rTar1]
 
             let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+            console.log(`aIn: ${aIn}`)
+
+            let E15 = new BN(10).pow(new BN(15));
+            if (aIn.lt(E15)) { // 0.001
+                console.log(`aIn too low, skip actions`)
+                return;
+            }
 
             let poolPrices = await prices(uniV3PoolWmaticUsdc, qsPoolWmaticUsdc);
 
@@ -229,7 +273,7 @@ async function main() {
             let usdcReceived = await unwrap(usdPlusReceived)
         }
 
-        balancesCurrent = await balancesQsPoolN(qsPoolWmaticUsdPlus);
+        balancesCurrent = await balancesQsPool(qsPoolWmaticUsdPlus);
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
 
@@ -262,7 +306,7 @@ async function main() {
 
         // console.log(`result0: ${result0}`)
         // console.log(`result1: ${result1}`)
-        if (result0.cmpn(0) <= 0) {
+        if (result0.ltn(0)) {
             throw new Error("Result is below zero")
         }
 
@@ -441,44 +485,10 @@ async function main() {
         let price1Per0 = reserve1Normalized / reserve0Normalized;
 
         return {
-            reserve0: reserve0Normalized,
-            reserve1: reserve1Normalized,
+            reserve0: reserves[0],
+            reserve1: reserves[1],
             price0Per1: price0Per1,
             price1Per0: price1Per0,
-        }
-    }
-
-
-    async function balancesQsPoolNN(pool) {
-        let reserves = await pool.getReserves();
-        let token0Address = await pool.token0();
-        let token1Address = await pool.token1();
-
-        let token0 = await ethers.getContractAt(ERC20, token0Address, wallet);
-        let token1 = await ethers.getContractAt(ERC20, token1Address, wallet);
-
-        let reserve0Normalized = new BN(reserves[0].toString()).mul(
-            new BN(10).pow(
-                new BN(18).sub(new BN((await token0.decimals()).toString()))
-            )
-        );
-        let reserve1Normalized = new BN(reserves[1].toString()).mul(
-            new BN(10).pow(
-                new BN(18).sub(new BN((await token1.decimals()).toString()))
-            )
-        );
-
-        return {
-            reserve0: reserve0Normalized,
-            reserve1: reserve1Normalized
-        }
-    }
-
-    async function balancesQsPoolN(pool) {
-        let reserves = await pool.getReserves();
-        return {
-            reserve0: reserves[0],
-            reserve1: reserves[1]
         }
     }
 
@@ -520,6 +530,47 @@ async function main() {
         return {
             token0,
             token1,
+            price
+        };
+    }
+
+    async function getSampleTargetsUniV3(pool) {
+        let slot = await pool.slot0();
+        let sqrtPriceX96 = slot[0];
+
+        let token0Address = await pool.token0();
+        let token1Address = await pool.token1();
+
+        let token0 = await ethers.getContractAt(ERC20, token0Address, wallet);
+        let token1 = await ethers.getContractAt(ERC20, token1Address, wallet);
+
+        let token0Decimals = new BN((await token0.decimals()).toString());
+        let token1Decimals = new BN((await token1.decimals()).toString());
+        const tokenDecimals = [
+            token0Decimals,
+            token1Decimals,
+        ];
+
+        let price = parseFloat(univ3prices.sqrtPrice(tokenDecimals, sqrtPriceX96).toFixed({
+            reverse: false,
+            decimalPlaces: 18,
+        }));
+
+
+        let token0Balance = new BN(10).pow(token0Decimals).muln(1000000);
+        let token1Balance = new BN(10).pow(token1Decimals).muln(1000000);
+
+        // save 12 precision digits after dot
+        let E12Num = 1000000000000;
+        let E12 = new BN(E12Num);
+        let priceScaledE6 = new BN(Math.floor(price * E12Num).toString())
+
+        token1Balance = token1Balance.mul(E12).div(priceScaledE6);
+
+        // make same object like in QS pool reserves
+        return {
+            reserve0: token0Balance,
+            reserve1: token1Balance,
             price
         };
     }
