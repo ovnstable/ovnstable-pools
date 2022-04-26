@@ -117,15 +117,26 @@ async function main() {
         let token0Symbol = await token0.symbol();
         let token1Symbol = await token1.symbol();
 
-        let reserve0Normalized = reserves[0] / 10 ** (await token0.decimals());
-        let reserve1Normalized = reserves[1] / 10 ** (await token1.decimals());
+        let token0Decimals = await token0.decimals();
+        let token1Decimals = await token1.decimals();
+
+        let reserve0Normalized = reserves[0] / 10 ** token0Decimals;
+        let reserve1Normalized = reserves[1] / 10 ** token1Decimals;
 
         let price0Per1 = reserve0Normalized / reserve1Normalized;
         let price1Per0 = reserve1Normalized / reserve0Normalized;
+        //
+        // let balances0 = await token0.balanceOf(pool.address);
+        // let balances1 = await token1.balanceOf(pool.address);
+        //
+        // let balances0Normalized = balances0 / 10 ** token0Decimals;
+        // let balances1Normalized = balances1 / 10 ** token1Decimals;
 
         console.log(`-- balances for QS pool of ${token0Symbol}/${token1Symbol}`)
         console.log(`token0[${token0Symbol}]: ${reserve0Normalized}`)
+        // console.log(`token0[${token0Symbol}]: ${balances0Normalized}`)
         console.log(`token1[${token1Symbol}]: ${reserve1Normalized}`)
+        // console.log(`token1[${token1Symbol}]: ${balances1Normalized}`)
         console.log(`price0Per1: ${price0Per1}`);
         console.log(`price1Per0: ${price1Per0}`);
         console.log(`-------------------------------------`)
