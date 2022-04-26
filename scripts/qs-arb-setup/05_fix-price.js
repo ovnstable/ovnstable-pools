@@ -90,160 +90,30 @@ async function main() {
         let balancesCurrent = await balancesQsPool(qsPoolUsdPlusWeth);
         let balancesTarget = await balancesQsPool(qsPoolUsdcWeth);
 
-        let changePrice = balancesTarget.price0Per1 / balancesCurrent.price0Per1;
-        let changePriceInv = balancesTarget.price1Per0 / balancesCurrent.price1Per0;
-        console.log(`changePrice: ${changePrice}`)
-        console.log(`changePriceInv: ${changePriceInv}`)
-
-        //
         // changePrice = (rA_0/rA_1)/(rB_0/rB_1);
-        //
-        // changePrice * (rB_0/rB_1) = (rA_0/rA_1)
-
-
-        // if(true){
-        //     return;
-        // }
-
-        // let amountInWmaticToUsdPlus = toE18(3000);
-        //
-        //
-        // let pricesAfter = await prices(uniV3PoolWmaticUsdc, qsPoolWmaticUsdPlus);
-        //
-        // let feeOnQsSwap = 0.003;
-        //
-        // let balancesAfter = await balancesQsPool(qsPoolWmaticUsdPlus);
-        //
-        // // исходные балансы
-        // let b0_0;
-        // let b0_1;
-        //
-        //
-        // // результирующие балансы
-        // let b1_0;
-        // let b1_1;
-        //
-        // // b0_0*b0_1 ~= b1_0*b1_1
-
-
-        let rIn0 = balancesCurrent.reserve1;
-        let rOut0 = balancesCurrent.reserve0;
-        let p1 = 0.8;
-        // let p1 = 0.7447510160007935;
-
-
-        // aIn=(rIn0*1000 *(rOut0 - (rIn0 + aIn) / p1))/((rOut0 - (rOut0 - (rIn0 + aIn) / p1))*997)+1
-
-
-        // let a = 997 / p1
-        // let b = 997 * (rOut0 + rIn0 / p1 + 1 / p1) + 1000 * rIn0 / p1
-        // let c = 997 * rIn0 / p1 + 997 * rOut0 - 1000 * rIn0 * rOut0 + 1000 * rIn0 * rIn0 / p1
-        //
-        // console.log(`a: ${a}`)
-        // console.log(`b: ${b}`)
-        // console.log(`c: ${c}`)
-        //
-        // let d = b * b - 4 * a * c;
-        // console.log(`d: ${d}`)
-        // let sqrtD = Math.sqrt(d);
-        // console.log(`sqrt(d): ${sqrtD}`)
-        //
-        // let x1 = (-b + sqrtD) / (2 * a)
-        // let x2 = (-b - sqrtD) / (2 * a)
-        //
-        // console.log(`x1: ${x1}`)
-        // console.log(`x2: ${x2}`)
-        //
-        //
-        // let _997 = new BN(997);
-        // let _1000 = new BN(1000);
-        //
-
-        // balancesCurrent = await balancesQsPoolN(qsPoolUsdPlusWeth);
-        // balancesTarget = await balancesQsPoolN(qsPoolUsdcWeth);
-        //
-        // console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
-        // console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
-        //
-        // rIn0 = new BN(balancesCurrent.reserve0.toString());
-        // rOut0 = new BN(balancesCurrent.reserve1.toString());
-        //
-        // console.log(`balancesTarget.reserve0: ${balancesTarget.reserve0}`)
-        // console.log(`balancesTarget.reserve1: ${balancesTarget.reserve1}`)
-        //
-        //
-        // // p1 = rIn1/rOut1
-        // let rIn1 = new BN(balancesTarget.reserve0.toString());
-        // let rOut1 = new BN(balancesTarget.reserve1.toString());
-        //
-        // //
-        // a = _997.mul(rOut1).div(rIn1);
-        // b = _997.mul(rOut0.add(rIn0.mul(rOut1).div(rIn1)).add(rOut1.div(rIn1))).add(
-        //     _1000.mul(rIn0).mul(rOut1).div(rIn1))
-        // c = _997.mul(rIn0).mul(rOut1).div(rIn1).add(
-        //     _997.mul(rOut0)).sub(
-        //     _1000.mul(rIn0).mul(rOut0)).add(
-        //     _1000.mul(rIn0).mul(rIn0).mul(rOut1).div(rIn1))
-        //
-        // console.log(`a: ${a}`)
-        // console.log(`b: ${b}`)
-        // console.log(`c: ${c}`)
-        //
-        // d = b.mul(b).sub(a.mul(c).muln(4));
-        // console.log(`d: ${d}`)
-        // sqrtD = sqrt(d);
-        // console.log(`sqrt(d): ${sqrtD}`)
-        //
-        // x1 = b.neg().add(sqrtD).div(a.muln(2));
-        // x2 = b.neg().sub(sqrtD).div(a.muln(2));
-        //
-        // console.log(`x1: ${x1}`)
-        // console.log(`x2: ${x2}`)
-
-        //342 283 662 - before
-        //341 564 133 - target
-        //342 625 464 - t1
-        //342 764 078 - t2
-
-
-        // console.log(`${balancesCurrent.reserve0 * balancesCurrent.reserve1}`)
-        // console.log(`${balancesAfter.reserve0 * balancesAfter.reserve1}`)
-
-
-        // p0 = b0_0 / b0_1
-        // p1 = b1_0 / b1_1
-
-        // !!!!!!! TODO: в обратную сторону
-
-        // let pre = 3053984;
-        //
-        // let prr = await prices(uniV3PoolUsdcWeth, qsPoolUsdcWeth);
-        // let u1 = Math.floor(prr.uniV3Price * pre);
-        // u1 = pre;
-        // console.log(`u1: ${u1}`)
-
-
-        let w1 = 10000000;
-        let up1 = 10000000;
+        let changePrice = balancesTarget.price0Per1 / balancesCurrent.price0Per1;
+        console.log(`changePrice: ${changePrice}`)
 
 
         // check price change
-
         if (changePrice < 1) {
-
             // for UsdcWeth pool it means swap 1 -> 0 => weth->usdc
+            console.log(`changePrice < 1 => 1->0`)
 
-            balancesCurrent = await balancesQsPoolN(qsPoolUsdPlusWeth);
-            balancesTarget = await balancesQsPoolN(qsPoolUsdcWeth);
+
+            await printUserBalances("1");
+            // 0->1
+
+            let balancesCurrent = await balancesQsPoolN(qsPoolUsdPlusWeth);
+            let balancesTarget = await balancesQsPoolN(qsPoolUsdcWeth);
 
             console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
             console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
-
             console.log(`balancesTarget.reserve0: ${balancesTarget.reserve0}`)
             console.log(`balancesTarget.reserve1: ${balancesTarget.reserve1}`)
 
-            rIn0 = new BN(balancesCurrent.reserve1.toString());
-            rOut0 = new BN(balancesCurrent.reserve0.toString());
+            let rIn0 = new BN(balancesCurrent.reserve1.toString());
+            let rOut0 = new BN(balancesCurrent.reserve0.toString());
 
             // p1 = rIn1/rOut1
             let rIn1 = new BN(balancesTarget.reserve1.toString());
@@ -254,46 +124,41 @@ async function main() {
             let aIn2 = calcAInForQS(rOut0, rIn0, rOut1, rIn1)
             console.log(`aIn2: ${aIn2}`)
 
+            let poolPrices = await prices(uniV3PoolUsdcWeth, qsPoolUsdcWeth);
 
-            let prr = await prices(uniV3PoolUsdcWeth, qsPoolUsdcWeth);
-            let u1 = Math.floor(prr.uniV3Price * aIn2);
-            // u1 = pre;
-            console.log(`u1: ${u1}`)
-
+            let _1000 = new BN(1000);
+            let uniV3PriceScaled = new BN(Math.floor(poolPrices.uniV3Price * 1000).toString())
+            let maximumUsdcForSpend = aIn.mul(uniV3PriceScaled.div(_1000))
+            console.log(`maximumUsdcForSpend: ${maximumUsdcForSpend}`)
 
             await printUserBalances("1");
             await prices(uniV3PoolUsdcWeth, qsPoolUsdPlusWeth)
-            // let wethForSpending = await swapU3(usdc, weth, u1);
 
-            // let needWethForQs = aIn2;
-            let needWethForQs = new BN("2107903900");
-
-            let maximumUsdcForSpend = u1;
+            let needWethForQs = aIn;
             let usdcSpent = await swapU3Out(usdc, weth, needWethForQs, maximumUsdcForSpend);
             console.log(`usdcSpent: ${usdcSpent}`)
             let wethForSpending = needWethForQs;
 
-            // wethForSpending = new BN("3421124625897879");
             console.log(`wethForSpending: ${wethForSpending}`)
-            console.log(`+++ --`)
 
             await prices(uniV3PoolUsdcWeth, qsPoolUsdPlusWeth)
             await printUserBalances("2");
 
             await printBalancesQsPool(qsPoolUsdPlusWeth)
-            let upR = await swapQS(weth, usdPlus, wethForSpending);
-            console.log(`upR: ${upR}`)
+            let usdPlusReceived = await swapQS(weth, usdPlus, wethForSpending);
+            console.log(`usdPlusReceived: ${usdPlusReceived}`)
             await printBalancesQsPool(qsPoolUsdPlusWeth)
 
             await printUserBalances("3");
 
-            let ucR = await unwrap(upR)
-            console.log(`ucR: ${ucR}`)
+            let usdcReceived = await unwrap(usdPlusReceived)
+            console.log(`usdcReceived: ${usdcReceived}`)
             await printUserBalances("4");
 
             balancesCurrent = await balancesQsPoolN(qsPoolUsdPlusWeth);
             console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
             console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
+
         } else {
 
             console.log(`changePrice > 1 => 0->1`)
@@ -328,9 +193,7 @@ async function main() {
 
             await printUserBalances("2");
 
-            let usdPlusToSpent = usdPlusReceived;
-
-            let wethToSpent = await swapQS(usdPlus, weth, usdPlusToSpent);
+            let wethToSpent = await swapQS(usdPlus, weth, usdPlusReceived);
             console.log(`wethToSpent: ${wethToSpent}`)
             await printUserBalances("3");
             let resultUsdc = await swapU3(weth, usdc, wethToSpent);
@@ -478,7 +341,7 @@ async function main() {
             sqrtPriceLimitX96: 0
         }
 
-        console.log(swapParams)
+        // console.log(swapParams)
         let retValue = await u3Router.callStatic.exactOutputSingle(swapParams);
         await u3Router.exactOutputSingle(swapParams);
         return retValue;
