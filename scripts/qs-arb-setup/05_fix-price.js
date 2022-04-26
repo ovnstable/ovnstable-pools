@@ -173,7 +173,7 @@ async function main() {
             console.log(`aIn: ${aIn}`)
 
             // equivalent to use uniV3 swap price
-            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve0).div(balancesTarget.reserve1);
             // give 1% more for spending
             maximumUsdcForSpend = maximumUsdcForSpend.muln(101).divn(100)
 
@@ -206,7 +206,7 @@ async function main() {
             let usdcIn = calcAInForWrap(aIn);
             let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
             // equivalent to use uniV3 swap price
-            usdcOut = usdcOut.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            usdcOut = usdcOut.mul(balancesTarget.reserve0).div(balancesTarget.reserve1);
             console.log(`USDC for loan: ${usdcIn}`)
             console.log(`USDC after   : ${usdcOut}`)
             console.log(`Lost         : ${usdcIn.sub(usdcOut)}`)
@@ -280,7 +280,7 @@ async function main() {
             console.log(`aIn: ${aIn}`)
 
             // equivalent to use uniV3 swap price
-            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve0).div(balancesTarget.reserve1);
             // give 1% more for spending
             maximumUsdcForSpend = maximumUsdcForSpend.muln(101).divn(100)
 
@@ -314,7 +314,7 @@ async function main() {
             let usdcIn = calcAInForWrap(aIn);
             let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
             // equivalent to use uniV3 swap price
-            usdcOut = usdcOut.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            usdcOut = usdcOut.mul(balancesTarget.reserve0).div(balancesTarget.reserve1);
 
             let diff = usdcIn.sub(usdcOut);
             console.log(`USDC for loan: ${usdcIn}`)

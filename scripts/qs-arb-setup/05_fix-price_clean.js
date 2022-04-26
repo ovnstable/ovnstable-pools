@@ -79,7 +79,6 @@ async function main() {
     let upperChangePriceWmaticUsdPlus = 1.1001; // 1 pp
 
 
-    // await printUserBalances("before");
     await evmCheckpoint("default");
     try {
 
@@ -123,8 +122,32 @@ async function main() {
     } catch (e) {
         console.log(e);
     }
-    // await printUserBalances("after");
     await evmRestore("default");
+
+    async function chain_U3_QS_UN(
+        token0,
+        token1,
+        token2,
+        token0MaximumSpend,
+        token1AmountOut
+    ) {
+        let token0Spent = await swapU3Out(token0, token1, token1AmountOut, token0MaximumSpend);
+        let token2Received = await swapQS(token1, token2, token1AmountOut);
+        let usdcReceived = await unwrap(token2Received)
+    }
+
+
+    async function chain_WR_QS_U3(
+        token0,
+        token1,
+        token2,
+        usdcForWrapping
+    ) {
+        let token0Received = await wrap(usdcForWrapping);
+        let token1Received = await swapQS(token0, token1, token0Received);
+        let usdcReceived = await swapU3(token1, token2, token1Received);
+    }
+
 
     async function fixUsdcWeth() {
 
@@ -147,8 +170,6 @@ async function main() {
             console.log(`changePrice in bound ${lowerBound}-${upperBound}, skip actions`)
             return;
         }
-
-        await printUserBalances("1");
 
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
@@ -173,7 +194,7 @@ async function main() {
             console.log(`aIn: ${aIn}`)
 
             // equivalent to use uniV3 swap price
-            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve0).div(balancesTarget.reserve1);
             // give 1% more for spending
             maximumUsdcForSpend = maximumUsdcForSpend.muln(101).divn(100)
 
@@ -190,10 +211,7 @@ async function main() {
             }
 
             let wethForSpending = aIn;
-
-            let usdcSpent = await swapU3Out(usdc, weth, wethForSpending, maximumUsdcForSpend);
-            let usdPlusReceived = await swapQS(weth, usdPlus, wethForSpending);
-            let usdcReceived = await unwrap(usdPlusReceived)
+            await chain_U3_QS_UN(usdc, weth, usdPlus, maximumUsdcForSpend, wethForSpending);
 
         } else {
             console.log(`changePrice > 1 => 0->1`)
@@ -206,7 +224,7 @@ async function main() {
             let usdcIn = calcAInForWrap(aIn);
             let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
             // equivalent to use uniV3 swap price
-            usdcOut = usdcOut.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            usdcOut = usdcOut.mul(balancesTarget.reserve0).div(balancesTarget.reserve1);
             console.log(`USDC for loan: ${usdcIn}`)
             console.log(`USDC after   : ${usdcOut}`)
             console.log(`Lost         : ${usdcIn.sub(usdcOut)}`)
@@ -220,16 +238,13 @@ async function main() {
 
             let usdcForWrapping = calcAInForWrap(aIn);
 
-            let usdPlusReceived = await wrap(usdcForWrapping);
-            let wethReceived = await swapQS(usdPlus, weth, usdPlusReceived);
-            let usdcReceived = await swapU3(weth, usdc, wethReceived);
+            await chain_WR_QS_U3(usdPlus, weth, usdc, usdcForWrapping)
         }
 
         balancesCurrent = await balancesQsPool(qsPoolUsdPlusWeth);
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
 
-        await printUserBalances("2");
 
     }
 
@@ -255,7 +270,6 @@ async function main() {
             return false;
         }
 
-        await printUserBalances("1");
 
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
@@ -280,7 +294,7 @@ async function main() {
             console.log(`aIn: ${aIn}`)
 
             // equivalent to use uniV3 swap price
-            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve0).div(balancesTarget.reserve1);
             // give 1% more for spending
             maximumUsdcForSpend = maximumUsdcForSpend.muln(101).divn(100)
 
@@ -314,7 +328,7 @@ async function main() {
             let usdcIn = calcAInForWrap(aIn);
             let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
             // equivalent to use uniV3 swap price
-            usdcOut = usdcOut.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            usdcOut = usdcOut.mul(balancesTarget.reserve0).div(balancesTarget.reserve1);
 
             let diff = usdcIn.sub(usdcOut);
             console.log(`USDC for loan: ${usdcIn}`)
@@ -359,7 +373,6 @@ async function main() {
             return;
         }
 
-        await printUserBalances("1");
 
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
@@ -400,9 +413,8 @@ async function main() {
 
             let usdcForWrapping = calcAInForWrap(aIn);
 
-            let usdPlusReceived = await wrap(usdcForWrapping);
-            let wethReceived = await swapQS(usdPlus, wmatic, usdPlusReceived);
-            let usdcReceived = await swapU3(wmatic, usdc, wethReceived);
+            await chain_WR_QS_U3(usdPlus, wmatic, usdc, usdcForWrapping)
+
         } else {
             console.log(`changePrice > 1 => 0->1`)
 
@@ -430,16 +442,13 @@ async function main() {
 
             let wethForSpending = aIn;
 
-            let usdcSpent = await swapU3Out(usdc, wmatic, wethForSpending, maximumUsdcForSpend);
-            let usdPlusReceived = await swapQS(wmatic, usdPlus, wethForSpending);
-            let usdcReceived = await unwrap(usdPlusReceived)
+            await chain_U3_QS_UN(usdc, wmatic, usdPlus, maximumUsdcForSpend, wethForSpending);
         }
 
         balancesCurrent = await balancesQsPool(qsPoolWmaticUsdPlus);
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
 
-        await printUserBalances("2");
 
     }
 
@@ -466,7 +475,6 @@ async function main() {
             return false;
         }
 
-        await printUserBalances("1");
 
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
@@ -566,12 +574,8 @@ async function main() {
         let tSqrt = sqrt(underSqrt)
         let t4 = _1997.mul(rIn0)
         let nominator0 = _997.sub(t4).add(tSqrt)
-        let nominator1 = _997.sub(t4).sub(tSqrt)
         let result0 = nominator0.div(_1994)
-        let result1 = nominator1.div(_1994)
 
-        // console.log(`result0: ${result0}`)
-        // console.log(`result1: ${result1}`)
         if (result0.ltn(0)) {
             throw new Error("Result is below zero")
         }
@@ -661,10 +665,6 @@ async function main() {
     async function swapU3(tokenIn, tokenOut, amountIn) {
         await tokenIn.approve(u3Router.address, amountIn.toString());
 
-        // let sqrtPriceLimitX96 = zeroForOne
-        //     ? BigNumber.from('4295128740')
-        //     : BigNumber.from('1461446703485210103287273052203988822378723970341');
-
         let swapParams = {
             tokenIn: tokenIn.address,
             tokenOut: tokenOut.address,
@@ -672,13 +672,10 @@ async function main() {
             recipient: wallet.address,
             deadline: MAX_UINT256.toString(),
             amountIn: amountIn.toString(),
-            // amountIn: 0,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0
-            // sqrtPriceLimitX96: sqrtPriceLimitX96.toString(),
         }
 
-        // console.log(swapParams)
         let retValue = await u3Router.callStatic.exactInputSingle(swapParams);
         await u3Router.exactInputSingle(swapParams);
         return retValue;
@@ -698,62 +695,11 @@ async function main() {
             sqrtPriceLimitX96: 0
         }
 
-        console.log(swapParams)
         let retValue = await u3Router.callStatic.exactOutputSingle(swapParams);
         await u3Router.exactOutputSingle(swapParams);
         return retValue;
     }
 
-
-    async function printUserBalances(stage) {
-        console.log(`--- [Balance ${stage}]`)
-        console.log('WETH:      ' + await weth.balanceOf(wallet.address) / 1e18);
-        console.log('WMATIC:    ' + await wmatic.balanceOf(wallet.address) / 1e18);
-        console.log('USDC:      ' + await usdc.balanceOf(wallet.address) / 1e6);
-        console.log('USD+:      ' + await usdPlus.balanceOf(wallet.address) / 1e6);
-        console.log('PoolToken: ' + await qsPoolUsdPlusWeth.balanceOf(wallet.address) / 1e18);
-        console.log(`-------------------------------------`)
-    }
-
-
-    async function prices(uniV3Pool, qsPool) {
-        let {price} = await getPriceUniV3(uniV3Pool);
-        console.log(`UniV3 price: ${price}`)
-
-        let qsPrice = await getPriceQsPool(qsPool)
-        console.log(`QS price:    ${qsPrice}`)
-
-        return {
-            uniV3Price: price,
-            qsPrice: qsPrice,
-        }
-    }
-
-
-    async function printBalancesQsPool(pool) {
-        let reserves = await pool.getReserves();
-        let token0Address = await pool.token0();
-        let token1Address = await pool.token1();
-
-        let token0 = await ethers.getContractAt(ERC20, token0Address, wallet);
-        let token1 = await ethers.getContractAt(ERC20, token1Address, wallet);
-
-        let token0Symbol = await token0.symbol();
-        let token1Symbol = await token1.symbol();
-
-        let reserve0Normalized = reserves[0] / 10 ** (await token0.decimals());
-        let reserve1Normalized = reserves[1] / 10 ** (await token1.decimals());
-
-        let price0Per1 = reserve0Normalized / reserve1Normalized;
-        let price1Per0 = reserve1Normalized / reserve0Normalized;
-
-        console.log(`-- balances for QS pool of ${token0Symbol}/${token1Symbol}`)
-        console.log(`token0[${token0Symbol}]: ${reserve0Normalized}`)
-        console.log(`token1[${token1Symbol}]: ${reserve1Normalized}`)
-        console.log(`price0Per1: ${price0Per1}`);
-        console.log(`price1Per0: ${price1Per0}`);
-        console.log(`-------------------------------------`)
-    }
 
     async function balancesQsPool(pool) {
         let reserves = await pool.getReserves();
@@ -777,47 +723,6 @@ async function main() {
         }
     }
 
-    async function getPriceQsPool(pool) {
-        let reserves = await pool.getReserves();
-        let token0Address = await pool.token0();
-        let token1Address = await pool.token1();
-
-        let token0 = await ethers.getContractAt(ERC20, token0Address, wallet);
-        let token1 = await ethers.getContractAt(ERC20, token1Address, wallet);
-
-        let reserve0Normalized = reserves[0] / 10 ** (await token0.decimals());
-        let reserve1Normalized = reserves[1] / 10 ** (await token1.decimals());
-
-        return reserve0Normalized / reserve1Normalized;
-    }
-
-
-    async function getPriceUniV3(pool) {
-        let slot = await pool.slot0();
-        let sqrtPriceX96 = slot[0];
-
-        let token0Address = await pool.token0();
-        let token1Address = await pool.token1();
-
-        let token0 = await ethers.getContractAt(ERC20, token0Address, wallet);
-        let token1 = await ethers.getContractAt(ERC20, token1Address, wallet);
-
-        const tokenDecimals = [
-            await token0.decimals(),
-            await token1.decimals(),
-        ];
-
-        let price = parseFloat(univ3prices.sqrtPrice(tokenDecimals, sqrtPriceX96).toFixed({
-            reverse: false,
-            decimalPlaces: 18,
-        }));
-
-        return {
-            token0,
-            token1,
-            price
-        };
-    }
 
     async function getSampleTargetsUniV3(pool) {
         let slot = await pool.slot0();
