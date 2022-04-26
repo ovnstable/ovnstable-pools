@@ -88,7 +88,8 @@ async function main() {
         // await swap(uniV3PoolUsdcWeth, qsPoolUsdPlusWeth, weth, usdPlus, amountInWethToUsdPlus);
 
 
-        await fixUsdcWeth();
+        // await fixUsdcWeth();
+        await fixMaticUsdc();
 
 
     } catch (e) {
@@ -138,7 +139,7 @@ async function main() {
 
             let _1000 = new BN(1000);
             let uniV3PriceScaled = new BN(Math.floor(poolPrices.uniV3Price * 1000).toString())
-            let maximumUsdcForSpend = aIn.mul(uniV3PriceScaled.div(_1000))
+            let maximumUsdcForSpend = aIn.mul(uniV3PriceScaled).div(_1000)
 
             let wethForSpending = aIn;
 
@@ -160,6 +161,75 @@ async function main() {
         }
 
         balancesCurrent = await balancesQsPoolN(qsPoolUsdPlusWeth);
+        console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
+        console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
+
+        await printUserBalances("2");
+
+    }
+
+    async function fixMaticUsdc() {
+
+        // balances with prices fields
+        let balancesCurrent = await balancesQsPool(qsPoolWmaticUsdPlus);
+        let balancesTarget = await balancesQsPool(qsPoolWmaticUsdc);
+
+        // changePrice = (rA_0/rA_1)/(rB_0/rB_1);
+        let changePrice = balancesTarget.price0Per1 / balancesCurrent.price0Per1;
+        console.log(`changePrice: ${changePrice}`)
+
+        await printUserBalances("1");
+
+        // plain balances
+        balancesCurrent = await balancesQsPoolN(qsPoolWmaticUsdPlus);
+        balancesTarget = await balancesQsPoolN(qsPoolWmaticUsdc);
+
+        console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
+        console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
+        console.log(`balancesTarget.reserve0: ${balancesTarget.reserve0}`)
+        console.log(`balancesTarget.reserve1: ${balancesTarget.reserve1}`)
+
+
+        let rCur0 = new BN(balancesCurrent.reserve0.toString());
+        let rCur1 = new BN(balancesCurrent.reserve1.toString());
+        let rTar0 = new BN(balancesTarget.reserve0.toString());
+        let rTar1 = new BN(balancesTarget.reserve1.toString());
+
+
+        // check price change
+        if (changePrice < 1) {
+            // for UsdcWeth pool it means swap 1 -> 0 => weth->usdc
+            console.log(`changePrice < 1 => 1->0`)
+
+            let [rIn0, rOut0, rIn1, rOut1] = [rCur1, rCur0, rTar1, rTar0]
+
+            let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+            let usdcForWrapping = calcAInForWrap(aIn);
+
+            let usdPlusReceived = await wrap(usdcForWrapping);
+            let wethReceived = await swapQS(usdPlus, wmatic, usdPlusReceived);
+            let usdcReceived = await swapU3(wmatic, usdc, wethReceived);
+        } else {
+            console.log(`changePrice > 1 => 0->1`)
+
+            let [rIn0, rOut0, rIn1, rOut1] = [rCur0, rCur1, rTar0, rTar1]
+
+            let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+
+            let poolPrices = await prices(uniV3PoolWmaticUsdc, qsPoolWmaticUsdc);
+
+            let _1000 = new BN(1000);
+            let uniV3PriceScaled = new BN(Math.floor(poolPrices.uniV3Price * 1000).toString())
+            let maximumUsdcForSpend = aIn.mul(uniV3PriceScaled).div(_1000)
+
+            let wethForSpending = aIn;
+
+            let usdcSpent = await swapU3Out(usdc, wmatic, wethForSpending, maximumUsdcForSpend);
+            let usdPlusReceived = await swapQS(wmatic, usdPlus, wethForSpending);
+            let usdcReceived = await unwrap(usdPlusReceived)
+        }
+
+        balancesCurrent = await balancesQsPoolN(qsPoolWmaticUsdPlus);
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
 
@@ -299,7 +369,7 @@ async function main() {
             sqrtPriceLimitX96: 0
         }
 
-        // console.log(swapParams)
+        console.log(swapParams)
         let retValue = await u3Router.callStatic.exactOutputSingle(swapParams);
         await u3Router.exactOutputSingle(swapParams);
         return retValue;
