@@ -543,7 +543,7 @@ async function main() {
             let E15 = new BN(10).pow(new BN(15));
             if (aIn.lt(E15)) { // 0.001
                 console.log(`aIn too low, skip actions`)
-                return;
+                return false;
             }
 
             if (diff > 0) {
@@ -713,13 +713,11 @@ async function main() {
         let reserve1Normalized = reserves[1] / 10 ** (await token1.decimals());
 
         let price0Per1 = reserve0Normalized / reserve1Normalized;
-        let price1Per0 = reserve1Normalized / reserve0Normalized;
 
         return {
             reserve0: reserves[0],
             reserve1: reserves[1],
             price0Per1: price0Per1,
-            price1Per0: price1Per0,
         }
     }
 
