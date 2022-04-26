@@ -75,19 +75,49 @@ async function main() {
 
     let lowerChangePriceUsdPlusWeth = 0.9999; // 1 pp
     let upperChangePriceUsdPlusWeth = 1.0001; // 1 pp
-    let lowerChangePriceWmaticUsdPlus = 0.9999; // 1 pp
-    let upperChangePriceWmaticUsdPlus = 1.0001; // 1 pp
+    let lowerChangePriceWmaticUsdPlus = 0.8999; // 1 pp
+    let upperChangePriceWmaticUsdPlus = 1.1001; // 1 pp
 
 
     // await printUserBalances("before");
     await evmCheckpoint("default");
     try {
 
-        // await fixUsdcWeth();
-        // await fixUsdcWeth();
 
-        await fixMaticUsdc();
-        await fixMaticUsdc();
+        // if (await doNeedFixUsdcWeth()) {
+        //     console.log(`Need fixUsdcWeth 1`)
+        //     await fixUsdcWeth();
+        // } else {
+        //     console.log(`Skip fixUsdcWeth 1`)
+        // }
+        // if (await doNeedFixUsdcWeth()) {
+        //     console.log(`Need fixUsdcWeth 2`)
+        //     await fixUsdcWeth();
+        // } else {
+        //     console.log(`Skip fixUsdcWeth 2`)
+        // }
+
+        await fixUsdcWeth();
+        await fixUsdcWeth();
+
+
+        // -------------------------------------------------
+
+        // if (await doNeedFixMaticUsdc()) {
+        //     console.log(`Need fixMaticUsdc 1`)
+        //     await fixMaticUsdc();
+        // } else {
+        //     console.log(`Skip fixMaticUsdc 1`)
+        // }
+        // if (await doNeedFixMaticUsdc()) {
+        //     console.log(`Need fixMaticUsdc 2`)
+        //     await fixMaticUsdc();
+        // } else {
+        //     console.log(`Skip fixMaticUsdc 2`)
+        // }
+
+        // await fixMaticUsdc();
+        // await fixMaticUsdc();
 
 
     } catch (e) {
@@ -142,17 +172,22 @@ async function main() {
             let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
             console.log(`aIn: ${aIn}`)
 
+            // equivalent to use uniV3 swap price
+            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            // give 1% more for spending
+            maximumUsdcForSpend = maximumUsdcForSpend.muln(101).divn(100)
+
+            let usdcIn = maximumUsdcForSpend;
+            let usdcOut = calcAOutOnWrap(calcAOutForQS(aIn, rIn0, rOut0));
+            console.log(`USDC for loan: ${usdcIn}`)
+            console.log(`USDC after   : ${usdcOut}`)
+            console.log(`Lost         : ${usdcIn.sub(usdcOut)}`)
+
             let E15 = new BN(10).pow(new BN(15));
             if (aIn.lt(E15)) { // 0.001
                 console.log(`aIn too low, skip actions`)
                 return;
             }
-
-            let poolPrices = await prices(uniV3PoolUsdcWeth, qsPoolUsdcWeth);
-
-            let _1000 = new BN(1000);
-            let uniV3PriceScaled = new BN(Math.floor(poolPrices.uniV3Price * 1000).toString())
-            let maximumUsdcForSpend = aIn.mul(uniV3PriceScaled).div(_1000)
 
             let wethForSpending = aIn;
 
@@ -167,6 +202,15 @@ async function main() {
 
             let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
             console.log(`aIn: ${aIn}`)
+
+            let usdcIn = calcAInForWrap(aIn);
+            let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
+            // equivalent to use uniV3 swap price
+            usdcOut = usdcOut.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            console.log(`USDC for loan: ${usdcIn}`)
+            console.log(`USDC after   : ${usdcOut}`)
+            console.log(`Lost         : ${usdcIn.sub(usdcOut)}`)
+
 
             let E3 = new BN(10).pow(new BN(3));
             if (aIn.lt(E3)) { // 0.001
@@ -187,6 +231,110 @@ async function main() {
 
         await printUserBalances("2");
 
+    }
+
+    async function doNeedFixUsdcWeth() {
+
+        // balances with prices fields
+        let balancesCurrent = await balancesQsPool(qsPoolUsdPlusWeth);
+        let balancesTarget = await getSampleTargetsUniV3(uniV3PoolUsdcWeth);
+
+        let currentPrice0Per1 = balancesCurrent.price0Per1
+        let targetPrice0Per1 = balancesTarget.price
+        console.log(`currentPrice0Per1: ${currentPrice0Per1}`)
+        console.log(`targetPrice0Per1 : ${targetPrice0Per1}`)
+
+        // changePrice = (rA_0/rA_1)/(rB_0/rB_1);
+        let changePrice = targetPrice0Per1 / currentPrice0Per1
+        console.log(`changePrice: ${changePrice}`)
+
+        let lowerBound = lowerChangePriceUsdPlusWeth;
+        let upperBound = upperChangePriceUsdPlusWeth;
+        if (lowerBound < changePrice && changePrice < upperBound) {
+            console.log(`changePrice in bound ${lowerBound}-${upperBound}, skip actions`)
+            return false;
+        }
+
+        await printUserBalances("1");
+
+        console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
+        console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
+        console.log(`balancesTarget.reserve0:  ${balancesTarget.reserve0}`)
+        console.log(`balancesTarget.reserve1:  ${balancesTarget.reserve1}`)
+
+
+        let rCur0 = new BN(balancesCurrent.reserve0.toString());
+        let rCur1 = new BN(balancesCurrent.reserve1.toString());
+        let rTar0 = new BN(balancesTarget.reserve0.toString());
+        let rTar1 = new BN(balancesTarget.reserve1.toString());
+
+
+        // check price change
+        if (changePrice < 1) {
+            // for UsdcWeth pool it means swap 1 -> 0 => weth->usdc
+            console.log(`changePrice < 1 => 1->0`)
+
+            let [rIn0, rOut0, rIn1, rOut1] = [rCur1, rCur0, rTar1, rTar0]
+
+            let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+            console.log(`aIn: ${aIn}`)
+
+            // equivalent to use uniV3 swap price
+            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            // give 1% more for spending
+            maximumUsdcForSpend = maximumUsdcForSpend.muln(101).divn(100)
+
+            let usdcIn = maximumUsdcForSpend;
+            let usdcOut = calcAOutOnWrap(calcAOutForQS(aIn, rIn0, rOut0));
+
+            let diff = usdcIn.sub(usdcOut);
+            console.log(`USDC for loan: ${usdcIn}`)
+            console.log(`USDC after   : ${usdcOut}`)
+            console.log(`Lost         : ${diff}`)
+
+            let E15 = new BN(10).pow(new BN(15));
+            if (aIn.lt(E15)) { // 0.001
+                console.log(`aIn too low, skip actions`)
+                return false;
+            }
+
+            if (diff > 0) {
+                console.log(`Have lost on fixing, skip actions`)
+                return false;
+            }
+
+        } else {
+            console.log(`changePrice > 1 => 0->1`)
+
+            let [rIn0, rOut0, rIn1, rOut1] = [rCur0, rCur1, rTar0, rTar1]
+
+            let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+            console.log(`aIn: ${aIn}`)
+
+            let usdcIn = calcAInForWrap(aIn);
+            let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
+            // equivalent to use uniV3 swap price
+            usdcOut = usdcOut.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+
+            let diff = usdcIn.sub(usdcOut);
+            console.log(`USDC for loan: ${usdcIn}`)
+            console.log(`USDC after   : ${usdcOut}`)
+            console.log(`Lost         : ${diff}`)
+
+
+            let E3 = new BN(10).pow(new BN(3));
+            if (aIn.lt(E3)) { // 0.001
+                console.log(`aIn too low, skip actions`)
+                return false;
+            }
+
+            if (diff > 0) {
+                console.log(`Have lost on fixing, skip actions`)
+                return false;
+            }
+        }
+
+        return true;
     }
 
     async function fixMaticUsdc() {
@@ -235,6 +383,15 @@ async function main() {
             let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
             console.log(`aIn: ${aIn}`)
 
+            let usdcIn = calcAInForWrap(aIn);
+            let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
+            // equivalent to use uniV3 swap price
+            usdcOut = usdcOut.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            console.log(`USDC for loan: ${usdcIn}`)
+            console.log(`USDC after   : ${usdcOut}`)
+            console.log(`Lost         : ${usdcIn.sub(usdcOut)}`)
+
+
             let E3 = new BN(10).pow(new BN(3));
             if (aIn.lt(E3)) { // 0.001
                 console.log(`aIn too low, skip actions`)
@@ -254,17 +411,22 @@ async function main() {
             let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
             console.log(`aIn: ${aIn}`)
 
+            // equivalent to use uniV3 swap price
+            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            // give 1% more for spending
+            maximumUsdcForSpend = maximumUsdcForSpend.muln(101).divn(100)
+
+            let usdcIn = maximumUsdcForSpend;
+            let usdcOut = calcAOutOnWrap(calcAOutForQS(aIn, rIn0, rOut0));
+            console.log(`USDC for loan: ${usdcIn}`)
+            console.log(`USDC after   : ${usdcOut}`)
+            console.log(`Lost         : ${usdcIn.sub(usdcOut)}`)
+
             let E15 = new BN(10).pow(new BN(15));
             if (aIn.lt(E15)) { // 0.001
                 console.log(`aIn too low, skip actions`)
                 return;
             }
-
-            let poolPrices = await prices(uniV3PoolWmaticUsdc, qsPoolWmaticUsdc);
-
-            let _1000 = new BN(1000);
-            let uniV3PriceScaled = new BN(Math.floor(poolPrices.uniV3Price * 1000).toString())
-            let maximumUsdcForSpend = aIn.mul(uniV3PriceScaled).div(_1000)
 
             let wethForSpending = aIn;
 
@@ -279,6 +441,110 @@ async function main() {
 
         await printUserBalances("2");
 
+    }
+
+
+    async function doNeedFixMaticUsdc() {
+
+        // balances with prices fields
+        let balancesCurrent = await balancesQsPool(qsPoolWmaticUsdPlus);
+        let balancesTarget = await getSampleTargetsUniV3(uniV3PoolWmaticUsdc);
+
+        let currentPrice0Per1 = balancesCurrent.price0Per1
+        let targetPrice0Per1 = balancesTarget.price
+        console.log(`currentPrice0Per1: ${currentPrice0Per1}`)
+        console.log(`targetPrice0Per1 : ${targetPrice0Per1}`)
+
+        // changePrice = (rA_0/rA_1)/(rB_0/rB_1);
+        let changePrice = targetPrice0Per1 / currentPrice0Per1
+        console.log(`changePrice: ${changePrice}`)
+
+        let lowerBound = lowerChangePriceWmaticUsdPlus;
+        let upperBound = upperChangePriceWmaticUsdPlus;
+        if (lowerBound < changePrice && changePrice < upperBound) {
+            console.log(`changePrice in bound ${lowerBound}-${upperBound}, skip actions`)
+            return false;
+        }
+
+        await printUserBalances("1");
+
+        console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
+        console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
+        console.log(`balancesTarget.reserve0:  ${balancesTarget.reserve0}`)
+        console.log(`balancesTarget.reserve1:  ${balancesTarget.reserve1}`)
+
+
+        let rCur0 = new BN(balancesCurrent.reserve0.toString());
+        let rCur1 = new BN(balancesCurrent.reserve1.toString());
+        let rTar0 = new BN(balancesTarget.reserve0.toString());
+        let rTar1 = new BN(balancesTarget.reserve1.toString());
+
+
+        // check price change
+        if (changePrice < 1) {
+            // for UsdcWeth pool it means swap 1 -> 0 => weth->usdc
+            console.log(`changePrice < 1 => 1->0`)
+
+            let [rIn0, rOut0, rIn1, rOut1] = [rCur1, rCur0, rTar1, rTar0]
+
+            let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+            console.log(`aIn: ${aIn}`)
+
+            let usdcIn = calcAInForWrap(aIn);
+            let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
+            // equivalent to use uniV3 swap price
+            usdcOut = usdcOut.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+
+            let diff = usdcIn.sub(usdcOut);
+            console.log(`USDC for loan: ${usdcIn}`)
+            console.log(`USDC after   : ${usdcOut}`)
+            console.log(`Lost         : ${diff}`)
+
+            let E3 = new BN(10).pow(new BN(3));
+            if (aIn.lt(E3)) { // 0.001
+                console.log(`aIn too low, skip actions`)
+                return false;
+            }
+
+            if (diff > 0) {
+                console.log(`Have lost on fixing, skip actions`)
+                return false;
+            }
+
+        } else {
+            console.log(`changePrice > 1 => 0->1`)
+
+            let [rIn0, rOut0, rIn1, rOut1] = [rCur0, rCur1, rTar0, rTar1]
+
+            let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+            console.log(`aIn: ${aIn}`)
+
+            // equivalent to use uniV3 swap price
+            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
+            // give 1% more for spending
+            maximumUsdcForSpend = maximumUsdcForSpend.muln(101).divn(100)
+
+            let usdcIn = maximumUsdcForSpend;
+            let usdcOut = calcAOutOnWrap(calcAOutForQS(aIn, rIn0, rOut0));
+
+            let diff = usdcIn.sub(usdcOut);
+            console.log(`USDC for loan: ${usdcIn}`)
+            console.log(`USDC after   : ${usdcOut}`)
+            console.log(`Lost         : ${diff}`)
+
+            let E15 = new BN(10).pow(new BN(15));
+            if (aIn.lt(E15)) { // 0.001
+                console.log(`aIn too low, skip actions`)
+                return;
+            }
+
+            if (diff > 0) {
+                console.log(`Have lost on fixing, skip actions`)
+                return false;
+            }
+        }
+
+        return true;
     }
 
     function calcAInForQS(rIn0, rOut0, rIn1, rOut1) {
@@ -313,10 +579,29 @@ async function main() {
         return result0;
     }
 
+    // same to getAmountOut()
+    function calcAOutForQS(aIn, rIn0, rOut0) {
+        let _997 = new BN(997);
+        let _1000 = new BN(1000);
+
+        let amountInWithFee = aIn.mul(_997);
+        let numerator = amountInWithFee.mul(rOut0);
+        let denominator = rIn0.mul(_1000).add(amountInWithFee);
+        let amountOut = numerator.div(denominator);
+
+        return amountOut;
+    }
+
     function calcAInForWrap(aOut) {
         let _9996 = new BN(9996);
         let _10000 = new BN(10000);
         return aOut.mul(_10000).div(_9996);
+    }
+
+    function calcAOutOnWrap(aIn) {
+        let _9996 = new BN(9996);
+        let _10000 = new BN(10000);
+        return aIn.mul(_9996).div(_10000);
     }
 
     function sqrt(num) {

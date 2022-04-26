@@ -58,8 +58,8 @@ async function main() {
     // await evmCheckpoint("default");
     try {
 
-        // let amountInUsdPlusToWeth = toE6(5000);
-        // await swap(uniV3PoolUsdcWeth, qsPoolUsdPlusWeth, usdPlus, weth, amountInUsdPlusToWeth);
+        let amountInUsdPlusToWeth = toE6(5000);
+        await swap(uniV3PoolUsdcWeth, qsPoolUsdPlusWeth, usdPlus, weth, amountInUsdPlusToWeth);
         //
         // let amountInUsdPlusToWmatic = toE6(5000);
         // await swap(uniV3PoolWmaticUsdc, qsPoolWmaticUsdPlus, usdPlus, wmatic, amountInUsdPlusToWmatic);
@@ -67,8 +67,8 @@ async function main() {
         // let amountInWethToUsdPlus = toE18(1);
         // await swap(uniV3PoolUsdcWeth, qsPoolUsdPlusWeth, weth, usdPlus, amountInWethToUsdPlus);
 
-        let amountInWmaticToUsdPlus = toE18(3000);
-        await swap(uniV3PoolWmaticUsdc, qsPoolWmaticUsdPlus, wmatic, usdPlus, amountInWmaticToUsdPlus);
+        // let amountInWmaticToUsdPlus = toE18(3000);
+        // await swap(uniV3PoolWmaticUsdc, qsPoolWmaticUsdPlus, wmatic, usdPlus, amountInWmaticToUsdPlus);
 
     } catch (e) {
         console.log(e);
