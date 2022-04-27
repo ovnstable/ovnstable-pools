@@ -21,6 +21,8 @@ let iUniswapV2Router02Abi = JSON.parse(fs.readFileSync('./abi/IUniswapV2Router02
 let iUniswapV3PoolAbi = JSON.parse(fs.readFileSync('./abi/build/IUniswapV3Pool.json')).abi;
 let iUniswapV3Router02Abi = JSON.parse(fs.readFileSync('./abi/build/ISwapRouterV3.json')).abi;
 
+let ArbitrageQSAbi = JSON.parse(fs.readFileSync('./abi/build/ArbitrageQS.json')).abi;
+
 
 let usdcAddress = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174";
 let wethAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
@@ -42,6 +44,9 @@ let qsPoolWmaticUsdPlusAddress = "0x91F670270B86C80Ec92bB6B5914E6532cA967bFB";
 let qsPoolUsdPlusWethAddress = "0x901Debb34469e89FeCA591f5E5336984151fEc39";
 
 
+let arbAddress = "0x55Ac8D8d4776D9BA37a9A98Ba2e3ABb2ba710925";
+
+
 let gasOpts = {
     maxFeePerGas: "250000000000",
     maxPriorityFeePerGas: "250000000000"
@@ -51,9 +56,10 @@ async function main() {
 
     let wallet = await initWallet(ethers);
 
-
+    1000366077732111122
     let qsRouter = await ethers.getContractAt(iUniswapV2Router02Abi, qsRouterAddress, wallet);
     let u3Router = await ethers.getContractAt(iUniswapV3Router02Abi, uniV3RouterAddress, wallet);
+    let arb = await ethers.getContractAt(ArbitrageQSAbi, arbAddress, wallet);
 
     let qsPoolWmaticUsdc = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolWmaticUsdcAddress, wallet);
     let qsPoolUsdcWeth = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolUsdcWethAddress, wallet);
@@ -134,7 +140,7 @@ async function main() {
     ) {
         let token0Spent = await swapU3Out(token0, token1, token1AmountOut, token0MaximumSpend);
         let token2Received = await swapQS(token1, token2, token1AmountOut);
-        let usdcReceived = await unwrap(token2Received)
+        let usdcReceived = await unwrap(token2Received);
     }
 
 
@@ -159,18 +165,90 @@ async function main() {
         let lowerChangePriceBound = lowerChangePriceUsdPlusWeth;
         let upperChangePriceBound = upperChangePriceUsdPlusWeth;
 
-        let params = await getFixParams(
+
+        params = await getFixParams(
             qsPool,
             u3Pool,
             isUsdcLeft,
             xToken,
             lowerChangePriceBound,
             upperChangePriceBound
-        )
+        );
+
+        console.log(`-----   From js:`);
+        console.log(`params.skip: ${params.skip}`);
+        if(!params.skip) {
+            console.log(`params.useXtoUsdc: ${params.useXtoUsdc}`);
+            console.log(`params.tokens[0]: ${params.tokens[0].address}`);
+            console.log(`params.tokens[1]: ${params.tokens[1].address}`);
+            console.log(`params.tokens[2]: ${params.tokens[2].address}`);
+            console.log(`params.reserves[0]: ${params.reserves[0]}`);
+            console.log(`params.reserves[1]: ${params.reserves[1]}`);
+            console.log(`params.reserves[2]: ${params.reserves[2]}`);
+            console.log(`params.reserves[3]: ${params.reserves[3]}`);
+        }
+
+        let arbParams = await arb.getFixParams({
+            qsPool: qsPool.address,
+            u3Pool: u3Pool.address,
+            isUsdcLeft: isUsdcLeft,
+            usdc: usdc.address,
+            xToken: xToken.address,
+            usdPlus: usdPlus.address,
+            lowerChangePriceBound: new BN(10).pow(new BN(18)).sub(new BN(10).pow(new BN(14))).toString(),
+            upperChangePriceBound: new BN(10).pow(new BN(18)).add(new BN(10).pow(new BN(14))).toString(),
+            qsRouter: qsRouter.address,
+            u3Router: u3Router.address,
+        })
+
+        // 1342239264980
+        // 1342239264979505972135989118000000000000
+        console.log(JSON.stringify(arbParams));
+        console.log(`-----   From arb:`);
+        console.log(`params.skip: ${arbParams.skip}`);
+        console.log(`params.useXtoUsdc: ${arbParams.useXtoUsdc}`);
+        console.log(`params.tokens[0]: ${arbParams.tokens[0]}`);
+        console.log(`params.tokens[1]: ${arbParams.tokens[1]}`);
+        console.log(`params.tokens[2]: ${arbParams.tokens[2]}`);
+        console.log(`params.reserves[0]: ${arbParams.reserves[0]}`);
+        console.log(`params.reserves[1]: ${arbParams.reserves[1]}`);
+        console.log(`params.reserves[2]: ${arbParams.reserves[2]}`);
+        console.log(`params.reserves[3]: ${arbParams.reserves[3]}`);
+        console.log(`params.usdcIn: ${arbParams.usdcIn}`);
+        console.log(`params.usdcOut: ${arbParams.usdcOut}`);
+
+
+        // let params = await getFixParams(
+        //     qsPool,
+        //     u3Pool,
+        //     isUsdcLeft,
+        //     xToken,
+        //     lowerChangePriceBound,
+        //     upperChangePriceBound
+        // )
         if (params.skip) {
             return;
         }
-        await fix(params);
+        // await fix(params);
+
+        await usdc.transfer(arb.address, arbParams.usdcIn)
+        await arb.fix({
+            qsPool: qsPool.address,
+            u3Pool: u3Pool.address,
+            isUsdcLeft: isUsdcLeft,
+            usdc: usdc.address,
+            xToken: xToken.address,
+            usdPlus: usdPlus.address,
+            lowerChangePriceBound: new BN(10).pow(new BN(18)).sub(new BN(10).pow(new BN(14))).toString(),
+            upperChangePriceBound: new BN(10).pow(new BN(18)).add(new BN(10).pow(new BN(14))).toString(),
+            qsRouter: qsRouter.address,
+            u3Router: u3Router.address
+        });
+
+        balancesCurrent = await balancesQsPool(qsPool);
+        console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
+        console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
+
     }
 
     async function fixMaticUsdc() {
@@ -182,7 +260,7 @@ async function main() {
         let lowerChangePriceBound = lowerChangePriceWmaticUsdPlus;
         let upperChangePriceBound = upperChangePriceWmaticUsdPlus;
 
-        let params = await getFixParams(
+        params = await getFixParams(
             qsPool,
             u3Pool,
             isUsdcLeft,
@@ -190,10 +268,72 @@ async function main() {
             lowerChangePriceBound,
             upperChangePriceBound
         );
+
+        console.log(`-----   From js:`);
+        console.log(`params.skip: ${params.skip}`);
+        if(!params.skip) {
+            console.log(`params.useXtoUsdc: ${params.useXtoUsdc}`);
+            console.log(`params.tokens[0]: ${params.tokens[0].address}`);
+            console.log(`params.tokens[1]: ${params.tokens[1].address}`);
+            console.log(`params.tokens[2]: ${params.tokens[2].address}`);
+            console.log(`params.reserves[0]: ${params.reserves[0]}`);
+            console.log(`params.reserves[1]: ${params.reserves[1]}`);
+            console.log(`params.reserves[2]: ${params.reserves[2]}`);
+            console.log(`params.reserves[3]: ${params.reserves[3]}`);
+        }
+
+        let arbParams = await arb.getFixParams({
+            qsPool: qsPool.address,
+            u3Pool: u3Pool.address,
+            isUsdcLeft: isUsdcLeft,
+            usdc: usdc.address,
+            xToken: xToken.address,
+            usdPlus: usdPlus.address,
+            lowerChangePriceBound: new BN(10).pow(new BN(18)).sub(new BN(10).pow(new BN(14))).toString(),
+            upperChangePriceBound: new BN(10).pow(new BN(18)).add(new BN(10).pow(new BN(14))).toString(),
+            qsRouter: qsRouter.address,
+            u3Router: u3Router.address,
+        })
+        // 1342239264980
+        // 1342239264979505972135989118000000000000
+        console.log(JSON.stringify(arbParams));
+        console.log(`-----   From arb:`);
+        console.log(`params.skip: ${arbParams.skip}`);
+        console.log(`params.useXtoUsdc: ${arbParams.useXtoUsdc}`);
+        console.log(`params.tokens[0]: ${arbParams.tokens[0]}`);
+        console.log(`params.tokens[1]: ${arbParams.tokens[1]}`);
+        console.log(`params.tokens[2]: ${arbParams.tokens[2]}`);
+        console.log(`params.reserves[0]: ${arbParams.reserves[0]}`);
+        console.log(`params.reserves[1]: ${arbParams.reserves[1]}`);
+        console.log(`params.reserves[2]: ${arbParams.reserves[2]}`);
+        console.log(`params.reserves[3]: ${arbParams.reserves[3]}`);
+        console.log(`params.usdcIn: ${arbParams.usdcIn}`);
+        console.log(`params.usdcOut: ${arbParams.usdcOut}`);
+
+
         if (params.skip) {
             return;
         }
-        await fix(params);
+        // await fix(params);
+
+        await usdc.transfer(arb.address, arbParams.usdcIn)
+        await arb.fix({
+            qsPool: qsPool.address,
+            u3Pool: u3Pool.address,
+            isUsdcLeft: isUsdcLeft,
+            usdc: usdc.address,
+            xToken: xToken.address,
+            usdPlus: usdPlus.address,
+            lowerChangePriceBound: new BN(10).pow(new BN(18)).sub(new BN(10).pow(new BN(14))).toString(),
+            upperChangePriceBound: new BN(10).pow(new BN(18)).add(new BN(10).pow(new BN(14))).toString(),
+            qsRouter: qsRouter.address,
+            u3Router: u3Router.address,
+        });
+
+        balancesCurrent = await balancesQsPool(qsPool);
+        console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
+        console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
+
     }
 
 
@@ -647,7 +787,8 @@ async function main() {
 
     async function swapU3Out(tokenIn, tokenOut, amountOut, amountInMaximum) {
         await tokenIn.approve(u3Router.address, amountInMaximum.toString());
-
+        console.log("swapU3Out amountInMaximum: " + amountInMaximum);
+        console.log("swapU3Out amountOut: " + amountOut);
         let swapParams = {
             tokenIn: tokenIn.address,
             tokenOut: tokenOut.address,
@@ -703,8 +844,8 @@ async function main() {
             token1Decimals,
         ];
 
-        // _2_96 = new BN(2).pow(new BN(96));
-        // console.log(`_2_96: ${_2_96}`)
+        _2_96 = new BN(2).pow(new BN(96));
+        console.log(`_2_96: ${_2_96}`)
         // // 91806626997176688271480
         //
         //
@@ -715,58 +856,64 @@ async function main() {
         // // -> 128.192
         //
         //
-        // // 1063820804.765131544816214155
-        // sqrtPriceX96BN = new BN(sqrtPriceX96.toString());
-        //
-        // baseTokenDecimals = token1Decimals;
-        // quoteTokenDecimals = token0Decimals;
-        //
-        // sqrt10X128 = new BN("1076067327063303206878105757264492625226");
+        // 1063820804.765131544816214155
+        sqrtPriceX96BN = new BN(sqrtPriceX96.toString());
+        console.log(`sqrtRatioX96: ${sqrtPriceX96BN}`)
 
-        //
-        // console.log(`baseTokenDecimals: ${baseTokenDecimals}`)
-        // console.log(`quoteTokenDecimals: ${quoteTokenDecimals}`)
-        // let adjustedSqrtRatioX96
-        // if (baseTokenDecimals > quoteTokenDecimals) {
-        //     let difference = baseTokenDecimals.sub(quoteTokenDecimals);
-        //     adjustedSqrtRatioX96 = sqrtPriceX96BN.mul(new BN(10).pow(difference.divn(2)));
-        //     if (difference % 2 === 1) {
-        //         adjustedSqrtRatioX96 = adjustedSqrtRatioX96
-        //             .mul(sqrt10X128)
-        //             .div(new BN(2).pow(new BN(128)));
-        //     }
-        //
-        // } else {
-        //     let difference = quoteTokenDecimals.sub(baseTokenDecimals)
-        //     adjustedSqrtRatioX96 = sqrtPriceX96BN.div(new BN(10).pow(difference.divn(2)));
-        //     if (difference % 2 === 1) {
-        //         adjustedSqrtRatioX96 = adjustedSqrtRatioX96
-        //             .mul(new BN(2).pow(new BN(128)))
-        //             .div(sqrt10X128);
-        //     }
-        // }
-        //
-        // console.log(`adjustedSqrtRatioX96: ${adjustedSqrtRatioX96}`)
-        //
-        // let value = adjustedSqrtRatioX96
-        //     .mul(adjustedSqrtRatioX96)
-        //     .div(new BN(2).pow(new BN(64)))
-        // console.log(`value: ${value}`)
-        // value1 = value
-        //     .mul(new BN(10).pow(new BN(57)))
-        //     .div(new BN(2).pow(new BN(128)));
-        // console.log(`value1: ${value1}`)
-        // value2 = value
-        //     .mul(new BN(10).pow(new BN(18)))
-        //     .div(new BN(2).pow(new BN(128)));
-        // console.log(`value2: ${value2}`)
-        //
-        // console.log(`sqrtPriceX96: ${sqrtPriceX96BN}`)
-        // console.log(`sqrtPriceX96: ${sqrtPriceX96BN.pow(new BN(2))}`)
-        // console.log(`sqrtPriceX96: ${sqrtPriceX96BN.pow(new BN(2)).mul(new BN("1"))}`)
-        // console.log(`sqrtPriceX96: ${sqrtPriceX96BN.pow(new BN(2)).mul(new BN("1").mul(_2_96))}`)
-        // console.log(`sqrtPriceX96: ${sqrtPriceX96BN.pow(new BN(2)).div(_2_96).mul(new BN("1").mul(_2_96)).div(_2_96)}`)
-        // console.log(`sqrtPriceX96: ${sqrtPriceX96BN.pow(new BN(2)).div(_2_96).mul(new BN("1"))}`)
+        baseTokenDecimals = token0Decimals;
+        quoteTokenDecimals = token1Decimals;
+
+        sqrt10X128 = new BN("1076067327063303206878105757264492625226");
+
+
+        console.log(`baseTokenDecimals: ${baseTokenDecimals}`)
+        console.log(`quoteTokenDecimals: ${quoteTokenDecimals}`)
+        let adjustedSqrtRatioX96
+        if (baseTokenDecimals.gt(quoteTokenDecimals)) {
+            let difference = baseTokenDecimals.sub(quoteTokenDecimals);
+            console.log("difference: " + difference);
+            adjustedSqrtRatioX96 = sqrtPriceX96BN.mul(new BN(10).pow(difference.divn(2)));
+            console.log("adjustedSqrtRatioX96: " + adjustedSqrtRatioX96);
+            if (difference % 2 === 1) {
+                adjustedSqrtRatioX96 = adjustedSqrtRatioX96
+                    .mul(sqrt10X128)
+                    .div(new BN(2).pow(new BN(128)));
+                console.log("adjustedSqrtRatioX96: " + adjustedSqrtRatioX96);
+            }
+
+        } else {
+            let difference = quoteTokenDecimals.sub(baseTokenDecimals)
+            console.log("difference: " + difference);
+            adjustedSqrtRatioX96 = sqrtPriceX96BN.div(new BN(10).pow(difference.divn(2)));
+            console.log("adjustedSqrtRatioX96: " + adjustedSqrtRatioX96);
+            if (difference % 2 === 1) {
+                adjustedSqrtRatioX96 = adjustedSqrtRatioX96
+                    .mul(new BN(2).pow(new BN(128)))
+                    .div(sqrt10X128);
+                console.log("adjustedSqrtRatioX96: " + adjustedSqrtRatioX96);
+            }
+        }
+
+        console.log(`adjustedSqrtRatioX96: ${adjustedSqrtRatioX96}`)
+
+        let value = adjustedSqrtRatioX96
+            .mul(adjustedSqrtRatioX96)
+            .div(new BN(2).pow(new BN(64)))
+        console.log(`value: ${value}`)
+        if (adjustedSqrtRatioX96.lt(_2_96)) {
+            console.log("adjustedSqrtRatioX96 less then 2^96")
+        }
+        value1 = value
+            // .mul(new BN(10).pow(new BN(57)))
+            .mul(new BN(10).pow(new BN(44)))
+            .div(new BN(2).pow(new BN(128)));
+        console.log(`value1: ${value1}`)
+
+
+        value2 = value
+            .mul(new BN(10).pow(new BN(18)))
+            .div(new BN(2).pow(new BN(128)));
+        console.log(`value2: ${value2}`)
 
 
         let price = parseFloat(univ3prices.sqrtPrice(tokenDecimals, sqrtPriceX96).toFixed({
