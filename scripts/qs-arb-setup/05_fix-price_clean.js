@@ -97,8 +97,8 @@ async function main() {
         //     console.log(`Skip fixUsdcWeth 2`)
         // }
 
-        await fixUsdcWeth();
-        await fixUsdcWeth();
+        // await fixUsdcWeth();
+        // await fixUsdcWeth();
 
 
         // -------------------------------------------------
@@ -116,8 +116,8 @@ async function main() {
         //     console.log(`Skip fixMaticUsdc 2`)
         // }
 
-        // await fixMaticUsdc();
-        // await fixMaticUsdc();
+        await fixMaticUsdc();
+        await fixMaticUsdc();
 
 
     } catch (e) {
@@ -159,7 +159,7 @@ async function main() {
         let lowerChangePriceBound = lowerChangePriceUsdPlusWeth;
         let upperChangePriceBound = upperChangePriceUsdPlusWeth;
 
-        await fix(
+        let params = await getFixParams(
             qsPool,
             u3Pool,
             isUsdcLeft,
@@ -167,6 +167,10 @@ async function main() {
             lowerChangePriceBound,
             upperChangePriceBound
         )
+        if (params.skip) {
+            return;
+        }
+        await fix(params);
     }
 
     async function fixMaticUsdc() {
@@ -178,7 +182,31 @@ async function main() {
         let lowerChangePriceBound = lowerChangePriceWmaticUsdPlus;
         let upperChangePriceBound = upperChangePriceWmaticUsdPlus;
 
-        await fix(
+        let params = await getFixParams(
+            qsPool,
+            u3Pool,
+            isUsdcLeft,
+            xToken,
+            lowerChangePriceBound,
+            upperChangePriceBound
+        );
+        if (params.skip) {
+            return;
+        }
+        await fix(params);
+    }
+
+
+    async function doNeedFixUsdcWeth() {
+
+        let qsPool = qsPoolUsdPlusWeth;
+        let u3Pool = uniV3PoolUsdcWeth;
+        let isUsdcLeft = true;
+        let xToken = weth;
+        let lowerChangePriceBound = lowerChangePriceUsdPlusWeth;
+        let upperChangePriceBound = upperChangePriceUsdPlusWeth;
+
+        let params = await getFixParams(
             qsPool,
             u3Pool,
             isUsdcLeft,
@@ -186,9 +214,38 @@ async function main() {
             lowerChangePriceBound,
             upperChangePriceBound
         )
+        if (params.skip) {
+            return false;
+        }
+
+        return doNeedFix(params);
     }
 
-    async function fix(
+
+    async function doNeedFixMaticUsdc() {
+        let qsPool = qsPoolWmaticUsdPlus;
+        let u3Pool = uniV3PoolWmaticUsdc;
+        let isUsdcLeft = false;
+        let xToken = wmatic;
+        let lowerChangePriceBound = lowerChangePriceWmaticUsdPlus;
+        let upperChangePriceBound = upperChangePriceWmaticUsdPlus;
+
+        let params = await getFixParams(
+            qsPool,
+            u3Pool,
+            isUsdcLeft,
+            xToken,
+            lowerChangePriceBound,
+            upperChangePriceBound
+        );
+        if (params.skip) {
+            return false;
+        }
+
+        return doNeedFix(params);
+    }
+
+    async function getFixParams(
         qsPool,
         u3Pool,
         isUsdcLeft,
@@ -212,7 +269,9 @@ async function main() {
 
         if (lowerChangePriceBound < changePrice && changePrice < upperChangePriceBound) {
             console.log(`changePrice in bound ${lowerChangePriceBound}-${upperChangePriceBound}, skip actions`)
-            return;
+            return {
+                skip: true
+            };
         }
 
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
@@ -227,36 +286,80 @@ async function main() {
         let rTar1 = new BN(balancesTarget.reserve1.toString());
 
 
+        // let params = {
+        //     useXtoUsdc: false,
+        //     tokens: [token0, token1, token2],
+        //     reserves: [rIn0, rOut0, rIn1, rOut1]
+        // }
+
+        let params;
+
         if (isUsdcLeft) {
             if (changePrice < 1) {
                 console.log(`changePrice < 1 => 1->0`)
-                await xToUsdc(
-                    usdc, xToken, usdPlus,
-                    rCur1, rCur0, rTar1, rTar0
-                )
+
+                params = {
+                    useXtoUsdc: true,
+                    tokens: [usdc, xToken, usdPlus],
+                    reserves: [rCur1, rCur0, rTar1, rTar0]
+                }
             } else {
                 console.log(`changePrice > 1 => 0->1`)
-                await usdcToX(
-                    usdPlus, xToken, usdc,
-                    rCur0, rCur1, rTar0, rTar1
-                )
+
+                params = {
+                    useXtoUsdc: false,
+                    tokens: [usdPlus, xToken, usdc],
+                    reserves: [rCur0, rCur1, rTar0, rTar1]
+                }
             }
         } else {
             if (changePrice < 1) {
                 console.log(`changePrice < 1 => 1->0`)
-                await usdcToX(
-                    usdPlus, xToken, usdc,
-                    rCur1, rCur0, rTar1, rTar0
-                )
+
+                params = {
+                    useXtoUsdc: false,
+                    tokens: [usdPlus, xToken, usdc],
+                    reserves: [rCur1, rCur0, rTar1, rTar0]
+                }
+
             } else {
                 console.log(`changePrice > 1 => 0->1`)
-                await xToUsdc(
-                    usdc, xToken, usdPlus,
-                    rCur0, rCur1, rTar0, rTar1
-                )
+
+                params = {
+                    useXtoUsdc: true,
+                    tokens: [usdc, xToken, usdPlus],
+                    reserves: [rCur0, rCur1, rTar0, rTar1]
+                }
             }
         }
 
+        return params;
+    }
+
+
+    async function fix(params) {
+
+        if (params.useXtoUsdc) {
+            await xToUsdc(
+                params.tokens[0],
+                params.tokens[1],
+                params.tokens[2],
+                params.reserves[0],
+                params.reserves[1],
+                params.reserves[2],
+                params.reserves[3]
+            )
+        } else {
+            await usdcToX(
+                params.tokens[0],
+                params.tokens[1],
+                params.tokens[2],
+                params.reserves[0],
+                params.reserves[1],
+                params.reserves[2],
+                params.reserves[3]
+            )
+        }
 
         balancesCurrent = await balancesQsPool(qsPoolUsdPlusWeth);
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
@@ -264,210 +367,28 @@ async function main() {
 
     }
 
-    async function doNeedFixUsdcWeth() {
-
-        // balances with prices fields
-        let balancesCurrent = await balancesQsPool(qsPoolUsdPlusWeth);
-        let balancesTarget = await getSampleTargetsUniV3(uniV3PoolUsdcWeth);
-
-        let currentPrice0Per1 = balancesCurrent.price0Per1
-        let targetPrice0Per1 = balancesTarget.price
-        console.log(`currentPrice0Per1: ${currentPrice0Per1}`)
-        console.log(`targetPrice0Per1 : ${targetPrice0Per1}`)
-
-        // changePrice = (rA_0/rA_1)/(rB_0/rB_1);
-        let changePrice = targetPrice0Per1 / currentPrice0Per1
-        console.log(`changePrice: ${changePrice}`)
-
-        let lowerBound = lowerChangePriceUsdPlusWeth;
-        let upperBound = upperChangePriceUsdPlusWeth;
-        if (lowerBound < changePrice && changePrice < upperBound) {
-            console.log(`changePrice in bound ${lowerBound}-${upperBound}, skip actions`)
-            return false;
-        }
-
-
-        console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
-        console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
-        console.log(`balancesTarget.reserve0:  ${balancesTarget.reserve0}`)
-        console.log(`balancesTarget.reserve1:  ${balancesTarget.reserve1}`)
-
-
-        let rCur0 = new BN(balancesCurrent.reserve0.toString());
-        let rCur1 = new BN(balancesCurrent.reserve1.toString());
-        let rTar0 = new BN(balancesTarget.reserve0.toString());
-        let rTar1 = new BN(balancesTarget.reserve1.toString());
-
-
-        // check price change
-        if (changePrice < 1) {
-            // for UsdcWeth pool it means swap 1 -> 0 => weth->usdc
-            console.log(`changePrice < 1 => 1->0`)
-
-            let [rIn0, rOut0, rIn1, rOut1] = [rCur1, rCur0, rTar1, rTar0]
-
-            let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
-            console.log(`aIn: ${aIn}`)
-
-            // equivalent to use uniV3 swap price
-            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve0).div(balancesTarget.reserve1);
-            // give 1% more for spending
-            maximumUsdcForSpend = maximumUsdcForSpend.muln(101).divn(100)
-
-            let usdcIn = maximumUsdcForSpend;
-            let usdcOut = calcAOutOnWrap(calcAOutForQS(aIn, rIn0, rOut0));
-
-            let diff = usdcIn.sub(usdcOut);
-            console.log(`USDC for loan: ${usdcIn}`)
-            console.log(`USDC after   : ${usdcOut}`)
-            console.log(`Lost         : ${diff}`)
-
-            let E15 = new BN(10).pow(new BN(15));
-            if (aIn.lt(E15)) { // 0.001
-                console.log(`aIn too low, skip actions`)
-                return false;
-            }
-
-            if (diff > 0) {
-                console.log(`Have lost on fixing, skip actions`)
-                return false;
-            }
-
+    async function doNeedFix(params) {
+        if (params.useXtoUsdc) {
+            return await xToUsdcCheck(
+                params.tokens[0],
+                params.tokens[1],
+                params.tokens[2],
+                params.reserves[0],
+                params.reserves[1],
+                params.reserves[2],
+                params.reserves[3]
+            )
         } else {
-            console.log(`changePrice > 1 => 0->1`)
-
-            let [rIn0, rOut0, rIn1, rOut1] = [rCur0, rCur1, rTar0, rTar1]
-
-            let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
-            console.log(`aIn: ${aIn}`)
-
-            let usdcIn = calcAInForWrap(aIn);
-            let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
-            // equivalent to use uniV3 swap price
-            usdcOut = usdcOut.mul(balancesTarget.reserve0).div(balancesTarget.reserve1);
-
-            let diff = usdcIn.sub(usdcOut);
-            console.log(`USDC for loan: ${usdcIn}`)
-            console.log(`USDC after   : ${usdcOut}`)
-            console.log(`Lost         : ${diff}`)
-
-
-            let E3 = new BN(10).pow(new BN(3));
-            if (aIn.lt(E3)) { // 0.001
-                console.log(`aIn too low, skip actions`)
-                return false;
-            }
-
-            if (diff > 0) {
-                console.log(`Have lost on fixing, skip actions`)
-                return false;
-            }
+            return await usdcToXCheck(
+                params.tokens[0],
+                params.tokens[1],
+                params.tokens[2],
+                params.reserves[0],
+                params.reserves[1],
+                params.reserves[2],
+                params.reserves[3]
+            )
         }
-
-        return true;
-    }
-
-
-    async function doNeedFixMaticUsdc() {
-
-        // balances with prices fields
-        let balancesCurrent = await balancesQsPool(qsPoolWmaticUsdPlus);
-        let balancesTarget = await getSampleTargetsUniV3(uniV3PoolWmaticUsdc);
-
-        let currentPrice0Per1 = balancesCurrent.price0Per1
-        let targetPrice0Per1 = balancesTarget.price
-        console.log(`currentPrice0Per1: ${currentPrice0Per1}`)
-        console.log(`targetPrice0Per1 : ${targetPrice0Per1}`)
-
-        // changePrice = (rA_0/rA_1)/(rB_0/rB_1);
-        let changePrice = targetPrice0Per1 / currentPrice0Per1
-        console.log(`changePrice: ${changePrice}`)
-
-        let lowerBound = lowerChangePriceWmaticUsdPlus;
-        let upperBound = upperChangePriceWmaticUsdPlus;
-        if (lowerBound < changePrice && changePrice < upperBound) {
-            console.log(`changePrice in bound ${lowerBound}-${upperBound}, skip actions`)
-            return false;
-        }
-
-
-        console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
-        console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
-        console.log(`balancesTarget.reserve0:  ${balancesTarget.reserve0}`)
-        console.log(`balancesTarget.reserve1:  ${balancesTarget.reserve1}`)
-
-
-        let rCur0 = new BN(balancesCurrent.reserve0.toString());
-        let rCur1 = new BN(balancesCurrent.reserve1.toString());
-        let rTar0 = new BN(balancesTarget.reserve0.toString());
-        let rTar1 = new BN(balancesTarget.reserve1.toString());
-
-
-        // check price change
-        if (changePrice < 1) {
-            // for UsdcWeth pool it means swap 1 -> 0 => weth->usdc
-            console.log(`changePrice < 1 => 1->0`)
-
-            let [rIn0, rOut0, rIn1, rOut1] = [rCur1, rCur0, rTar1, rTar0]
-
-            let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
-            console.log(`aIn: ${aIn}`)
-
-            let usdcIn = calcAInForWrap(aIn);
-            let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
-            // equivalent to use uniV3 swap price
-            usdcOut = usdcOut.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
-
-            let diff = usdcIn.sub(usdcOut);
-            console.log(`USDC for loan: ${usdcIn}`)
-            console.log(`USDC after   : ${usdcOut}`)
-            console.log(`Lost         : ${diff}`)
-
-            let E3 = new BN(10).pow(new BN(3));
-            if (aIn.lt(E3)) { // 0.001
-                console.log(`aIn too low, skip actions`)
-                return false;
-            }
-
-            if (diff > 0) {
-                console.log(`Have lost on fixing, skip actions`)
-                return false;
-            }
-
-        } else {
-            console.log(`changePrice > 1 => 0->1`)
-
-            let [rIn0, rOut0, rIn1, rOut1] = [rCur0, rCur1, rTar0, rTar1]
-
-            let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
-            console.log(`aIn: ${aIn}`)
-
-            // equivalent to use uniV3 swap price
-            let maximumUsdcForSpend = aIn.mul(balancesTarget.reserve1).div(balancesTarget.reserve0);
-            // give 1% more for spending
-            maximumUsdcForSpend = maximumUsdcForSpend.muln(101).divn(100)
-
-            let usdcIn = maximumUsdcForSpend;
-            let usdcOut = calcAOutOnWrap(calcAOutForQS(aIn, rIn0, rOut0));
-
-            let diff = usdcIn.sub(usdcOut);
-            console.log(`USDC for loan: ${usdcIn}`)
-            console.log(`USDC after   : ${usdcOut}`)
-            console.log(`Lost         : ${diff}`)
-
-            let E15 = new BN(10).pow(new BN(15));
-            if (aIn.lt(E15)) { // 0.001
-                console.log(`aIn too low, skip actions`)
-                return false;
-            }
-
-            if (diff > 0) {
-                console.log(`Have lost on fixing, skip actions`)
-                return false;
-            }
-        }
-
-        return true;
     }
 
 
@@ -497,6 +418,7 @@ async function main() {
 
         await chain_WR_QS_U3(token0, token1, token2, usdcForWrapping)
     }
+
 
     async function xToUsdc(
         token0, token1, token2,
@@ -530,6 +452,72 @@ async function main() {
 
     }
 
+    async function usdcToXCheck(
+        token0, token1, token2,
+        rIn0, rOut0, rIn1, rOut1
+    ) {
+        let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+        console.log(`aIn: ${aIn}`)
+
+        let usdcIn = calcAInForWrap(aIn);
+        let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
+        // equivalent to use uniV3 swap price
+        usdcOut = usdcOut.mul(rIn1).div(rOut1);
+
+        let diff = usdcIn.sub(usdcOut);
+        console.log(`USDC for loan: ${usdcIn}`)
+        console.log(`USDC after   : ${usdcOut}`)
+        console.log(`Lost         : ${diff}`)
+
+        let E3 = new BN(10).pow(new BN(3));
+        if (aIn.lt(E3)) { // 0.001
+            console.log(`aIn too low, skip actions`)
+            return false;
+        }
+
+        if (diff > 0) {
+            console.log(`Have lost on fixing, skip actions`)
+            return false;
+        }
+
+        return true;
+    }
+
+    async function xToUsdcCheck(
+        token0, token1, token2,
+        rIn0, rOut0, rIn1, rOut1
+    ) {
+
+        let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+        console.log(`aIn: ${aIn}`)
+
+        // equivalent to use uniV3 swap price
+        let maximumUsdcForSpend = aIn.mul(rOut1).div(rIn1);
+
+        // give 1% more for spending
+        maximumUsdcForSpend = maximumUsdcForSpend.muln(101).divn(100)
+
+        let usdcIn = maximumUsdcForSpend;
+        let usdcOut = calcAOutOnWrap(calcAOutForQS(aIn, rIn0, rOut0));
+
+        let diff = usdcIn.sub(usdcOut);
+        console.log(`USDC for loan: ${usdcIn}`)
+        console.log(`USDC after   : ${usdcOut}`)
+        console.log(`Lost         : ${diff}`)
+
+        let E15 = new BN(10).pow(new BN(15));
+        if (aIn.lt(E15)) { // 0.001
+            console.log(`aIn too low, skip actions`)
+            return false;
+        }
+
+        if (diff > 0) {
+            console.log(`Have lost on fixing, skip actions`)
+            return false;
+        }
+
+        return true;
+    }
 
     function calcAInForQS(rIn0, rOut0, rIn1, rOut1) {
         // p1 = rIn1/rOut1
