@@ -191,8 +191,7 @@ async function main() {
 
             await xToUsdc(
                 usdc, weth, usdPlus,
-                rCur1, rCur0, rTar1, rTar0,
-                balancesTarget
+                rCur1, rCur0, rTar1, rTar0
             )
 
         } else {
@@ -200,8 +199,7 @@ async function main() {
 
             await usdcToX(
                 usdPlus, weth, usdc,
-                rCur0, rCur1, rTar0, rTar1,
-                balancesTarget
+                rCur0, rCur1, rTar0, rTar1
             )
         }
 
@@ -209,67 +207,6 @@ async function main() {
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
 
-
-    }
-
-    async function usdcToX(
-        token0, token1, token2,
-        rIn0, rOut0, rIn1, rOut1,
-        balancesTarget
-    ) {
-        let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
-        console.log(`aIn: ${aIn}`)
-
-        let usdcIn = calcAInForWrap(aIn);
-        let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
-        // equivalent to use uniV3 swap price
-        usdcOut = usdcOut.mul(rIn1).div(rOut1);
-        console.log(`USDC for loan: ${usdcIn}`)
-        console.log(`USDC after   : ${usdcOut}`)
-        console.log(`Lost         : ${usdcIn.sub(usdcOut)}`)
-
-
-        let E3 = new BN(10).pow(new BN(3));
-        if (aIn.lt(E3)) { // 0.001
-            console.log(`aIn too low, skip actions`)
-            return;
-        }
-
-        let usdcForWrapping = calcAInForWrap(aIn);
-
-        await chain_WR_QS_U3(token0, token1, token2, usdcForWrapping)
-    }
-
-    async function xToUsdc(
-        token0, token1, token2,
-        rIn0, rOut0, rIn1, rOut1,
-        balancesTarget
-    ) {
-
-        let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
-        console.log(`aIn: ${aIn}`)
-
-        // equivalent to use uniV3 swap price
-        let maximumUsdcForSpend = aIn.mul(rOut1).div(rIn1);
-
-        // give 1% more for spending
-        maximumUsdcForSpend = maximumUsdcForSpend.muln(101).divn(100)
-
-        let usdcIn = maximumUsdcForSpend;
-        let usdcOut = calcAOutOnWrap(calcAOutForQS(aIn, rIn0, rOut0));
-        console.log(`USDC for loan: ${usdcIn}`)
-        console.log(`USDC after   : ${usdcOut}`)
-        console.log(`Lost         : ${usdcIn.sub(usdcOut)}`)
-
-        // for 18 decimal in
-        let E15 = new BN(10).pow(new BN(15));
-        if (aIn.lt(E15)) { // 0.001
-            console.log(`aIn too low, skip actions`)
-            return;
-        }
-
-        let wethForSpending = aIn;
-        await chain_U3_QS_UN(token0, token1, token2, maximumUsdcForSpend, wethForSpending);
 
     }
 
@@ -418,8 +355,7 @@ async function main() {
 
             await usdcToX(
                 usdPlus, wmatic, usdc,
-                rCur1, rCur0, rTar1, rTar0,
-                balancesTarget
+                rCur1, rCur0, rTar1, rTar0
             )
 
         } else {
@@ -428,8 +364,7 @@ async function main() {
             // X -> usdc
             await xToUsdc(
                 usdc, wmatic, usdPlus,
-                rCur0, rCur1, rTar0, rTar1,
-                balancesTarget
+                rCur0, rCur1, rTar0, rTar1
             )
 
         }
@@ -543,6 +478,67 @@ async function main() {
 
         return true;
     }
+
+
+    async function usdcToX(
+        token0, token1, token2,
+        rIn0, rOut0, rIn1, rOut1
+    ) {
+        let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+        console.log(`aIn: ${aIn}`)
+
+        let usdcIn = calcAInForWrap(aIn);
+        let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
+        // equivalent to use uniV3 swap price
+        usdcOut = usdcOut.mul(rIn1).div(rOut1);
+        console.log(`USDC for loan: ${usdcIn}`)
+        console.log(`USDC after   : ${usdcOut}`)
+        console.log(`Lost         : ${usdcIn.sub(usdcOut)}`)
+
+
+        let E3 = new BN(10).pow(new BN(3));
+        if (aIn.lt(E3)) { // 0.001
+            console.log(`aIn too low, skip actions`)
+            return;
+        }
+
+        let usdcForWrapping = calcAInForWrap(aIn);
+
+        await chain_WR_QS_U3(token0, token1, token2, usdcForWrapping)
+    }
+
+    async function xToUsdc(
+        token0, token1, token2,
+        rIn0, rOut0, rIn1, rOut1
+    ) {
+
+        let aIn = calcAInForQS(rIn0, rOut0, rIn1, rOut1)
+        console.log(`aIn: ${aIn}`)
+
+        // equivalent to use uniV3 swap price
+        let maximumUsdcForSpend = aIn.mul(rOut1).div(rIn1);
+
+        // give 1% more for spending
+        maximumUsdcForSpend = maximumUsdcForSpend.muln(101).divn(100)
+
+        let usdcIn = maximumUsdcForSpend;
+        let usdcOut = calcAOutOnWrap(calcAOutForQS(aIn, rIn0, rOut0));
+        console.log(`USDC for loan: ${usdcIn}`)
+        console.log(`USDC after   : ${usdcOut}`)
+        console.log(`Lost         : ${usdcIn.sub(usdcOut)}`)
+
+        // for 18 decimal in
+        let E15 = new BN(10).pow(new BN(15));
+        if (aIn.lt(E15)) { // 0.001
+            console.log(`aIn too low, skip actions`)
+            return;
+        }
+
+        let wethForSpending = aIn;
+        await chain_U3_QS_UN(token0, token1, token2, maximumUsdcForSpend, wethForSpending);
+
+    }
+
 
     function calcAInForQS(rIn0, rOut0, rIn1, rOut1) {
         // p1 = rIn1/rOut1
