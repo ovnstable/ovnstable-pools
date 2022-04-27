@@ -152,9 +152,54 @@ async function main() {
 
     async function fixUsdcWeth() {
 
+        let qsPool = qsPoolUsdPlusWeth;
+        let u3Pool = uniV3PoolUsdcWeth;
+        let isUsdcLeft = true;
+        let xToken = weth;
+        let lowerChangePriceBound = lowerChangePriceUsdPlusWeth;
+        let upperChangePriceBound = upperChangePriceUsdPlusWeth;
+
+        await fix(
+            qsPool,
+            u3Pool,
+            isUsdcLeft,
+            xToken,
+            lowerChangePriceBound,
+            upperChangePriceBound
+        )
+    }
+
+    async function fixMaticUsdc() {
+
+        let qsPool = qsPoolWmaticUsdPlus;
+        let u3Pool = uniV3PoolWmaticUsdc;
+        let isUsdcLeft = false;
+        let xToken = wmatic;
+        let lowerChangePriceBound = lowerChangePriceWmaticUsdPlus;
+        let upperChangePriceBound = upperChangePriceWmaticUsdPlus;
+
+        await fix(
+            qsPool,
+            u3Pool,
+            isUsdcLeft,
+            xToken,
+            lowerChangePriceBound,
+            upperChangePriceBound
+        )
+    }
+
+    async function fix(
+        qsPool,
+        u3Pool,
+        isUsdcLeft,
+        xToken,
+        lowerChangePriceBound,
+        upperChangePriceBound
+    ) {
+
         // balances with prices fields
-        let balancesCurrent = await balancesQsPool(qsPoolUsdPlusWeth);
-        let balancesTarget = await getSampleTargetsUniV3(uniV3PoolUsdcWeth);
+        let balancesCurrent = await balancesQsPool(qsPool);
+        let balancesTarget = await getSampleTargetsUniV3(u3Pool);
 
         let currentPrice0Per1 = balancesCurrent.price0Per1
         let targetPrice0Per1 = balancesTarget.price
@@ -165,10 +210,8 @@ async function main() {
         let changePrice = targetPrice0Per1 / currentPrice0Per1
         console.log(`changePrice: ${changePrice}`)
 
-        let lowerBound = lowerChangePriceUsdPlusWeth;
-        let upperBound = upperChangePriceUsdPlusWeth;
-        if (lowerBound < changePrice && changePrice < upperBound) {
-            console.log(`changePrice in bound ${lowerBound}-${upperBound}, skip actions`)
+        if (lowerChangePriceBound < changePrice && changePrice < upperChangePriceBound) {
+            console.log(`changePrice in bound ${lowerChangePriceBound}-${upperChangePriceBound}, skip actions`)
             return;
         }
 
@@ -184,29 +227,40 @@ async function main() {
         let rTar1 = new BN(balancesTarget.reserve1.toString());
 
 
-        // check price change
-        if (changePrice < 1) {
-            // for UsdcWeth pool it means swap 1 -> 0 => weth->usdc
-            console.log(`changePrice < 1 => 1->0`)
-
-            await xToUsdc(
-                usdc, weth, usdPlus,
-                rCur1, rCur0, rTar1, rTar0
-            )
-
+        if (isUsdcLeft) {
+            if (changePrice < 1) {
+                console.log(`changePrice < 1 => 1->0`)
+                await xToUsdc(
+                    usdc, xToken, usdPlus,
+                    rCur1, rCur0, rTar1, rTar0
+                )
+            } else {
+                console.log(`changePrice > 1 => 0->1`)
+                await usdcToX(
+                    usdPlus, xToken, usdc,
+                    rCur0, rCur1, rTar0, rTar1
+                )
+            }
         } else {
-            console.log(`changePrice > 1 => 0->1`)
-
-            await usdcToX(
-                usdPlus, weth, usdc,
-                rCur0, rCur1, rTar0, rTar1
-            )
+            if (changePrice < 1) {
+                console.log(`changePrice < 1 => 1->0`)
+                await usdcToX(
+                    usdPlus, xToken, usdc,
+                    rCur1, rCur0, rTar1, rTar0
+                )
+            } else {
+                console.log(`changePrice > 1 => 0->1`)
+                await xToUsdc(
+                    usdc, xToken, usdPlus,
+                    rCur0, rCur1, rTar0, rTar1
+                )
+            }
         }
+
 
         balancesCurrent = await balancesQsPool(qsPoolUsdPlusWeth);
         console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
-
 
     }
 
@@ -311,69 +365,6 @@ async function main() {
         }
 
         return true;
-    }
-
-    async function fixMaticUsdc() {
-
-        // balances with prices fields
-        let balancesCurrent = await balancesQsPool(qsPoolWmaticUsdPlus);
-        let balancesTarget = await getSampleTargetsUniV3(uniV3PoolWmaticUsdc);
-
-        let currentPrice0Per1 = balancesCurrent.price0Per1
-        let targetPrice0Per1 = balancesTarget.price
-        console.log(`currentPrice0Per1: ${currentPrice0Per1}`)
-        console.log(`targetPrice0Per1 : ${targetPrice0Per1}`)
-
-        // changePrice = (rA_0/rA_1)/(rB_0/rB_1);
-        let changePrice = targetPrice0Per1 / currentPrice0Per1
-        console.log(`changePrice: ${changePrice}`)
-
-        let lowerBound = lowerChangePriceWmaticUsdPlus;
-        let upperBound = upperChangePriceWmaticUsdPlus;
-        if (lowerBound < changePrice && changePrice < upperBound) {
-            console.log(`changePrice in bound ${lowerBound}-${upperBound}, skip actions`)
-            return;
-        }
-
-
-        console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
-        console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
-        console.log(`balancesTarget.reserve0:  ${balancesTarget.reserve0}`)
-        console.log(`balancesTarget.reserve1:  ${balancesTarget.reserve1}`)
-
-
-        let rCur0 = new BN(balancesCurrent.reserve0.toString());
-        let rCur1 = new BN(balancesCurrent.reserve1.toString());
-        let rTar0 = new BN(balancesTarget.reserve0.toString());
-        let rTar1 = new BN(balancesTarget.reserve1.toString());
-
-
-        // check price change
-        if (changePrice < 1) {
-            // for UsdcWeth pool it means swap 1 -> 0 => weth->usdc
-            console.log(`changePrice < 1 => 1->0`)
-
-            await usdcToX(
-                usdPlus, wmatic, usdc,
-                rCur1, rCur0, rTar1, rTar0
-            )
-
-        } else {
-            console.log(`changePrice > 1 => 0->1`)
-
-            // X -> usdc
-            await xToUsdc(
-                usdc, wmatic, usdPlus,
-                rCur0, rCur1, rTar0, rTar1
-            )
-
-        }
-
-        balancesCurrent = await balancesQsPool(qsPoolWmaticUsdPlus);
-        console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
-        console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
-
-
     }
 
 
