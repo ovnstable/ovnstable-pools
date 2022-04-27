@@ -75,8 +75,8 @@ async function main() {
 
     let lowerChangePriceUsdPlusWeth = 0.9999; // 1 pp
     let upperChangePriceUsdPlusWeth = 1.0001; // 1 pp
-    let lowerChangePriceWmaticUsdPlus = 0.8999; // 1 pp
-    let upperChangePriceWmaticUsdPlus = 1.1001; // 1 pp
+    let lowerChangePriceWmaticUsdPlus = 0.9999; // 1 pp
+    let upperChangePriceWmaticUsdPlus = 1.0001; // 1 pp
 
 
     // await printUserBalances("before");
@@ -97,8 +97,8 @@ async function main() {
         //     console.log(`Skip fixUsdcWeth 2`)
         // }
 
-        await fixUsdcWeth();
-        await fixUsdcWeth();
+        // await fixUsdcWeth();
+        // await fixUsdcWeth();
 
 
         // -------------------------------------------------
@@ -116,8 +116,8 @@ async function main() {
         //     console.log(`Skip fixMaticUsdc 2`)
         // }
 
-        // await fixMaticUsdc();
-        // await fixMaticUsdc();
+        await fixMaticUsdc();
+        await fixMaticUsdc();
 
 
     } catch (e) {
