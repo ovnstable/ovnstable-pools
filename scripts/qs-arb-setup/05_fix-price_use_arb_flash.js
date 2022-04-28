@@ -44,7 +44,7 @@ let qsPoolWmaticUsdPlusAddress = "0x91F670270B86C80Ec92bB6B5914E6532cA967bFB";
 let qsPoolUsdPlusWethAddress = "0x901Debb34469e89FeCA591f5E5336984151fEc39";
 
 
-let arbAddress = "0xe6cFc17053c64838Fd7bb55BD4A2cb5b207A71ed";
+let arbAddress = "0xD0798f8308EFE28516C36D5d0dC31f68fD8D0d05";
 
 
 let gasOpts = {
@@ -188,7 +188,7 @@ async function main() {
             console.log(`params.reserves[3]: ${params.reserves[3]}`);
         }
 
-        let arbParams = await arb.getFixParams({
+        let callParams = {
             qsPool: qsPool.address,
             u3Pool: u3Pool.address,
             isUsdcLeft: isUsdcLeft,
@@ -199,7 +199,10 @@ async function main() {
             upperChangePriceBound: new BN(10).pow(new BN(18)).add(new BN(10).pow(new BN(14))).toString(),
             qsRouter: qsRouter.address,
             u3Router: u3Router.address,
-        })
+        };
+        console.log(JSON.stringify(callParams, null, 2));
+
+        let arbParams = await arb.getFixParams(callParams)
 
         // 1342239264980
         // 1342239264979505972135989118000000000000
@@ -207,13 +210,13 @@ async function main() {
         console.log(`-----   From arb:`);
         console.log(`params.skip: ${arbParams.skip}`);
         console.log(`params.useXtoUsdc: ${arbParams.useXtoUsdc}`);
-        console.log(`params.tokens[0]: ${arbParams.tokens[0]}`);
-        console.log(`params.tokens[1]: ${arbParams.tokens[1]}`);
-        console.log(`params.tokens[2]: ${arbParams.tokens[2]}`);
-        console.log(`params.reserves[0]: ${arbParams.reserves[0]}`);
-        console.log(`params.reserves[1]: ${arbParams.reserves[1]}`);
-        console.log(`params.reserves[2]: ${arbParams.reserves[2]}`);
-        console.log(`params.reserves[3]: ${arbParams.reserves[3]}`);
+        console.log(`params.tokens[0]: ${arbParams.tokens.token0}`);
+        console.log(`params.tokens[1]: ${arbParams.tokens.token1}`);
+        console.log(`params.tokens[2]: ${arbParams.tokens.token2}`);
+        console.log(`params.reserves[0]: ${arbParams.reserves.reserve0}`);
+        console.log(`params.reserves[1]: ${arbParams.reserves.reserve1}`);
+        console.log(`params.reserves[2]: ${arbParams.reserves.reserve2}`);
+        console.log(`params.reserves[3]: ${arbParams.reserves.reserve3}`);
         console.log(`params.usdcIn: ${arbParams.usdcIn}`);
         console.log(`params.usdcOut: ${arbParams.usdcOut}`);
 
@@ -225,26 +228,26 @@ async function main() {
         //     xToken,
         //     lowerChangePriceBound,
         //     upperChangePriceBound
-        // )
+        // )999900000000000000
         if (params.skip) {
             return;
         }
         // await fix(params);
 
-        let tx = await arb.fixByFlash({
-            qsPool: qsPool.address,
-            u3Pool: u3Pool.address,
-            isUsdcLeft: isUsdcLeft,
-            usdc: usdc.address,
-            xToken: xToken.address,
-            usdPlus: usdPlus.address,
-            lowerChangePriceBound: new BN(10).pow(new BN(18)).sub(new BN(10).pow(new BN(14))).toString(),
-            upperChangePriceBound: new BN(10).pow(new BN(18)).add(new BN(10).pow(new BN(14))).toString(),
-            qsRouter: qsRouter.address,
-            u3Router: u3Router.address
-        });
-
-        let res = await tx.wait();
+        // let tx = await arb.fixByFlash({
+        //     qsPool: qsPool.address,
+        //     u3Pool: u3Pool.address,
+        //     isUsdcLeft: isUsdcLeft,
+        //     usdc: usdc.address,
+        //     xToken: xToken.address,
+        //     usdPlus: usdPlus.address,
+        //     lowerChangePriceBound: new BN(10).pow(new BN(18)).sub(new BN(10).pow(new BN(14))).toString(),
+        //     upperChangePriceBound: new BN(10).pow(new BN(18)).add(new BN(10).pow(new BN(14))).toString(),
+        //     qsRouter: qsRouter.address,
+        //     u3Router: u3Router.address
+        // });
+        //
+        // let res = await tx.wait();
 
 
 
@@ -253,7 +256,7 @@ async function main() {
         console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
 
 
-        console.log(JSON.stringify(res, null, 2));
+        // console.log(JSON.stringify(res, null, 2));
 
     }
 
@@ -288,7 +291,7 @@ async function main() {
             console.log(`params.reserves[3]: ${params.reserves[3]}`);
         }
 
-        let arbParams = await arb.getFixParams({
+        let callParams = {
             qsPool: qsPool.address,
             u3Pool: u3Pool.address,
             isUsdcLeft: isUsdcLeft,
@@ -299,20 +302,23 @@ async function main() {
             upperChangePriceBound: new BN(10).pow(new BN(18)).add(new BN(10).pow(new BN(14))).toString(),
             qsRouter: qsRouter.address,
             u3Router: u3Router.address,
-        })
+        };
+        console.log(JSON.stringify(callParams, null, 2));
+
+        let arbParams = await arb.getFixParams(callParams)
         // 1342239264980
         // 1342239264979505972135989118000000000000
         console.log(JSON.stringify(arbParams));
         console.log(`-----   From arb:`);
         console.log(`params.skip: ${arbParams.skip}`);
         console.log(`params.useXtoUsdc: ${arbParams.useXtoUsdc}`);
-        console.log(`params.tokens[0]: ${arbParams.tokens[0]}`);
-        console.log(`params.tokens[1]: ${arbParams.tokens[1]}`);
-        console.log(`params.tokens[2]: ${arbParams.tokens[2]}`);
-        console.log(`params.reserves[0]: ${arbParams.reserves[0]}`);
-        console.log(`params.reserves[1]: ${arbParams.reserves[1]}`);
-        console.log(`params.reserves[2]: ${arbParams.reserves[2]}`);
-        console.log(`params.reserves[3]: ${arbParams.reserves[3]}`);
+        console.log(`params.tokens[0]: ${arbParams.tokens.token0}`);
+        console.log(`params.tokens[1]: ${arbParams.tokens.token1}`);
+        console.log(`params.tokens[2]: ${arbParams.tokens.token2}`);
+        console.log(`params.reserves[0]: ${arbParams.reserves.reserve0}`);
+        console.log(`params.reserves[1]: ${arbParams.reserves.reserve1}`);
+        console.log(`params.reserves[2]: ${arbParams.reserves.reserve2}`);
+        console.log(`params.reserves[3]: ${arbParams.reserves.reserve3}`);
         console.log(`params.usdcIn: ${arbParams.usdcIn}`);
         console.log(`params.usdcOut: ${arbParams.usdcOut}`);
 
