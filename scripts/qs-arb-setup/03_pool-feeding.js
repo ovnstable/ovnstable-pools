@@ -82,18 +82,25 @@ async function main() {
         let {token0, token1, price} = await getPriceUniV3(uniV3Pool);
         console.log(`price: ${price}`)
 
+        let preToken0Amount;
+        let preToken1Amount;
+        let priceInPool;
         if (token0.address.toLowerCase() === usdcAddress.toLowerCase()) {
             token0 = usdPlus;
+            token0Symbol = "USD+";
             console.log(`token0 replaced by usdPlus`)
+            preToken0Amount = amountToFeed / 2;
+            preToken1Amount = (amountToFeed / 2) / price;
+            priceInPool = preToken0Amount / preToken1Amount;
         }
         if (token1.address.toLowerCase() === usdcAddress.toLowerCase()) {
             token1 = usdPlus;
+            token1Symbol = "USD+";
             console.log(`token1 replaced by usdPlus`)
+            preToken1Amount = amountToFeed / 2;
+            preToken0Amount = (amountToFeed / 2) / price;
+            priceInPool = preToken1Amount / preToken0Amount;
         }
-
-        let preToken1Amount = amountToFeed / (price + 1)
-        let preToken0Amount = amountToFeed - preToken1Amount;
-        let priceInPool = preToken0Amount / preToken1Amount;
 
         console.log(`preToken0Amount: ${preToken0Amount}`)
         console.log(`preToken1Amount: ${preToken1Amount}`)
