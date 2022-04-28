@@ -26,11 +26,6 @@ let uniV3PoolWmaticUsdcAddress = "0xa374094527e1673a86de625aa59517c5de346d32"
 let uniV3PoolUsdcWethAddress = "0x45dda9cb7c25131df268515131f647d726f50608"
 
 
-// replace addresses from create script
-let qsPoolWmaticUsdPlusAddress = "0x91F670270B86C80Ec92bB6B5914E6532cA967bFB";
-let qsPoolUsdPlusWethAddress = "0x901Debb34469e89FeCA591f5E5336984151fEc39";
-
-
 let gasOpts = {
     maxFeePerGas: "250000000000",
     maxPriorityFeePerGas: "250000000000"
@@ -41,9 +36,6 @@ async function main() {
     let wallet = await initWallet(ethers);
 
     let qsRouter = await ethers.getContractAt(iUniswapV2Router02Abi, qsRouterAddress, wallet);
-
-    let qsPoolWmaticUsdPlus = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolWmaticUsdPlusAddress, wallet);
-    // let qsPoolUsdPlusWeth = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolUsdPlusWethAddress, wallet);
 
     let uniV3PoolWmaticUsdc = await ethers.getContractAt(iUniswapV3PoolAbi, uniV3PoolWmaticUsdcAddress, wallet);
     let uniV3PoolUsdcWeth = await ethers.getContractAt(iUniswapV3PoolAbi, uniV3PoolUsdcWethAddress, wallet);
@@ -56,14 +48,15 @@ async function main() {
     await printUserBalances("before");
     // await evmCheckpoint("default");
     try {
-        let amountToFeed = 20000;
+        let amountToFeed = 150000;
 
-        await feedPool(uniV3PoolWmaticUsdc, qsPoolWmaticUsdPlus, amountToFeed);
-        // await feedPool(uniV3PoolUsdcWeth, qsPoolUsdPlusWeth, amountToFeed);
+        await calcAmountInPool(uniV3PoolWmaticUsdc, amountToFeed);
+        await calcAmountInPool(uniV3PoolUsdcWeth, amountToFeed);
     } catch (e) {
         console.log(e);
     }
     await printUserBalances("after");
+
     // await evmRestore("default");
 
 
@@ -72,15 +65,17 @@ async function main() {
         console.log('WETH:      ' + await weth.balanceOf(wallet.address) / 1e18);
         console.log('WMATIC:    ' + await wmatic.balanceOf(wallet.address) / 1e18);
         console.log('USD+:      ' + await usdPlus.balanceOf(wallet.address) / 1e6);
-        // console.log('PoolToken: ' + await qsPoolUsdPlusWeth.balanceOf(wallet.address) / 1e18);
         console.log(`-------------------------------------`)
     }
 
 
-    async function feedPool(uniV3Pool, qsPool, amountToFeed) {
+    async function calcAmountInPool(uniV3Pool, amountToFeed) {
         console.log(`--- Start pool feeding`)
         let {token0, token1, price} = await getPriceUniV3(uniV3Pool);
         console.log(`price: ${price}`)
+
+        let token0Symbol = await token0.symbol();
+        let token1Symbol = await token1.symbol();
 
         let preToken0Amount;
         let preToken1Amount;
@@ -102,61 +97,18 @@ async function main() {
             priceInPool = preToken1Amount / preToken0Amount;
         }
 
-        console.log(`preToken0Amount: ${preToken0Amount}`)
-        console.log(`preToken1Amount: ${preToken1Amount}`)
+
+
+        console.log(`preToken0Amount[${token0Symbol}]: ${preToken0Amount}`)
+        console.log(`preToken1Amount[${token1Symbol}]: ${preToken1Amount}`)
         console.log(`priceInPool: ${priceInPool}`)
 
 
         let token0Amount = BigInt(Math.floor(toEX(preToken0Amount, await token0.decimals())));
         let token1Amount = BigInt(Math.floor(toEX(preToken1Amount, await token1.decimals())));
-        console.log(`token0Amount: ${token0Amount}`)
-        console.log(`token1Amount: ${token1Amount}`)
+        console.log(`token0Amount[${token0Symbol}]: ${token0Amount}`)
+        console.log(`token1Amount[${token1Symbol}]: ${token1Amount}`)
 
-        await token0.approve(qsRouter.address, token0Amount.toString())
-        console.log(`token0[${await token0.symbol()}] approved`)
-        await token1.approve(qsRouter.address, token1Amount.toString())
-        console.log(`token1[${await token1.symbol()}] approved`)
-        let result = await (await qsRouter.addLiquidity(
-            token0.address,
-            token1.address,
-            token0Amount.toString(),
-            token1Amount.toString(),
-            // token0Amount.toString(),
-            // token1Amount.toString(),
-            0,
-            0,
-            wallet.address,
-            MAX_UINT256.toString(),
-            gasOpts
-        )).wait();
-
-        await printBalancesQsPool(qsPool)
-    }
-
-
-    async function printBalancesQsPool(pool) {
-        let reserves = await pool.getReserves();
-        let token0Address = await pool.token0();
-        let token1Address = await pool.token1();
-
-        let token0 = await ethers.getContractAt(ERC20, token0Address, wallet);
-        let token1 = await ethers.getContractAt(ERC20, token1Address, wallet);
-
-        let token0Symbol = await token0.symbol();
-        let token1Symbol = await token1.symbol();
-
-        let reserve0Normalized = reserves[0] / 10 ** (await token0.decimals());
-        let reserve1Normalized = reserves[1] / 10 ** (await token1.decimals());
-
-        let price0Per1 = reserve0Normalized / reserve1Normalized;
-        let price1Per0 = reserve1Normalized / reserve0Normalized;
-
-        console.log(`-- balances for QS pool of ${token0Symbol}/${token1Symbol}`)
-        console.log(`token0[${token0Symbol}]: ${reserve0Normalized}`)
-        console.log(`token1[${token1Symbol}]: ${reserve1Normalized}`)
-        console.log(`price0Per1: ${price0Per1}`);
-        console.log(`price1Per0: ${price1Per0}`);
-        console.log(`-------------------------------------`)
     }
 
 
