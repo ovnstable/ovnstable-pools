@@ -12,7 +12,6 @@ let UsdPlusToken = JSON.parse(fs.readFileSync('./abi/UsdPlusToken.json'));
 let iUniswapV2FactoryAbi = JSON.parse(fs.readFileSync('./abi/build/IUniswapV2Factory.json')).abi;
 let iUniswapV2PairAbi = JSON.parse(fs.readFileSync('./abi/build/IUniswapV2Pair.json')).abi;
 
-let usdPlusAddress = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174";
 let usdcAddress = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174";
 let wethAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
 let wmaticAddress = "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270";
@@ -33,13 +32,16 @@ async function main() {
     let usdPlus = await ethers.getContractAt(UsdPlusToken.abi, UsdPlusToken.address, wallet);
     let weth = await ethers.getContractAt(ERC20, wethAddress, wallet);
     let wmatic = await ethers.getContractAt(ERC20, wmaticAddress, wallet);
+    let usdc = await ethers.getContractAt(ERC20, usdcAddress, wallet);
 
     let qsPoolWmaticUsdPlusAddress = await createPair(qsFactory, wmatic, usdPlus);
     let qsPoolUsdPlusWethAddress = await createPair(qsFactory, usdPlus, weth);
+    let qsPoolUsdcUsdPlusAddress = await createPair(qsFactory, usdPlus, usdc);
 
     console.log(`------------------------------------------------------------------`)
     console.log(`let qsPoolWmaticUsdPlusAddress = "${qsPoolWmaticUsdPlusAddress}";`);
     console.log(`let qsPoolUsdPlusWethAddress = "${qsPoolUsdPlusWethAddress}";`);
+    console.log(`let qsPoolUsdcUsdPlusAddress = "${qsPoolUsdcUsdPlusAddress}";`);
     console.log(`------------------------------------------------------------------`)
 
 

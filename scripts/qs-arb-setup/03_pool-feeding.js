@@ -29,6 +29,7 @@ let uniV3PoolUsdcWethAddress = "0x45dda9cb7c25131df268515131f647d726f50608"
 // replace addresses from create script
 let qsPoolWmaticUsdPlusAddress = "0x91F670270B86C80Ec92bB6B5914E6532cA967bFB";
 let qsPoolUsdPlusWethAddress = "0x901Debb34469e89FeCA591f5E5336984151fEc39";
+let qsPoolUsdcUsdPlusAddress = "0x37F382741307eb62f8dF06693c104efd67053299";
 
 
 let gasOpts = {
@@ -43,7 +44,8 @@ async function main() {
     let qsRouter = await ethers.getContractAt(iUniswapV2Router02Abi, qsRouterAddress, wallet);
 
     let qsPoolWmaticUsdPlus = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolWmaticUsdPlusAddress, wallet);
-    // let qsPoolUsdPlusWeth = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolUsdPlusWethAddress, wallet);
+    let qsPoolUsdPlusWeth = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolUsdPlusWethAddress, wallet);
+    let qsPoolUsdcUsdPlus = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolUsdcUsdPlusAddress, wallet);
 
     let uniV3PoolWmaticUsdc = await ethers.getContractAt(iUniswapV3PoolAbi, uniV3PoolWmaticUsdcAddress, wallet);
     let uniV3PoolUsdcWeth = await ethers.getContractAt(iUniswapV3PoolAbi, uniV3PoolUsdcWethAddress, wallet);
@@ -58,8 +60,9 @@ async function main() {
     try {
         let amountToFeed = 20000;
 
-        await feedPool(uniV3PoolWmaticUsdc, qsPoolWmaticUsdPlus, amountToFeed);
+        // await feedPool(uniV3PoolWmaticUsdc, qsPoolWmaticUsdPlus, amountToFeed);
         // await feedPool(uniV3PoolUsdcWeth, qsPoolUsdPlusWeth, amountToFeed);
+        await feedPool5050(qsPoolUsdcUsdPlus, amountToFeed);
     } catch (e) {
         console.log(e);
     }
@@ -123,6 +126,62 @@ async function main() {
             token1Amount.toString(),
             // token0Amount.toString(),
             // token1Amount.toString(),
+            0,
+            0,
+            wallet.address,
+            MAX_UINT256.toString(),
+            gasOpts
+        )).wait();
+
+        await printBalancesQsPool(qsPool)
+    }
+
+    async function feedPool5050(qsPool, amountToFeed) {
+        console.log(`--- Start pool feeding`)
+        let price = 1;
+        console.log(`price: ${price}`)
+
+        let token0Address = await qsPool.token0();
+        let token1Address = await qsPool.token1();
+
+        let token0 = await ethers.getContractAt(ERC20, token0Address, wallet);
+        let token1 = await ethers.getContractAt(ERC20, token1Address, wallet);
+
+        let preToken0Amount;
+        let preToken1Amount;
+        let priceInPool;
+        if (token0.address.toLowerCase() === usdcAddress.toLowerCase()) {
+            console.log(`token0 replaced by usdPlus`)
+            preToken0Amount = amountToFeed / 2;
+            preToken1Amount = (amountToFeed / 2) / price;
+            priceInPool = preToken0Amount / preToken1Amount;
+        }
+        if (token1.address.toLowerCase() === usdcAddress.toLowerCase()) {
+            console.log(`token1 replaced by usdPlus`)
+            preToken1Amount = amountToFeed / 2;
+            preToken0Amount = (amountToFeed / 2) * price;
+            priceInPool = preToken1Amount / preToken0Amount;
+        }
+
+        console.log(`preToken0Amount: ${preToken0Amount}`)
+        console.log(`preToken1Amount: ${preToken1Amount}`)
+        console.log(`priceInPool: ${priceInPool}`)
+
+
+        let token0Amount = BigInt(Math.floor(toEX(preToken0Amount, await token0.decimals())));
+        let token1Amount = BigInt(Math.floor(toEX(preToken1Amount, await token1.decimals())));
+        console.log(`token0Amount: ${token0Amount}`)
+        console.log(`token1Amount: ${token1Amount}`)
+
+        await token0.approve(qsRouter.address, token0Amount.toString())
+        console.log(`token0[${await token0.symbol()}] approved`)
+        await token1.approve(qsRouter.address, token1Amount.toString())
+        console.log(`token1[${await token1.symbol()}] approved`)
+        let result = await (await qsRouter.addLiquidity(
+            token0.address,
+            token1.address,
+            token0Amount.toString(),
+            token1Amount.toString(),
             0,
             0,
             wallet.address,

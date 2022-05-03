@@ -28,6 +28,7 @@ let qsPoolUsdcWethAddress = "0x853Ee4b2A13f8a742d64C8F088bE7bA2131f670d"
 // replace addresses from create script
 let qsPoolWmaticUsdPlusAddress = "0x91F670270B86C80Ec92bB6B5914E6532cA967bFB";
 let qsPoolUsdPlusWethAddress = "0x901Debb34469e89FeCA591f5E5336984151fEc39";
+let qsPoolUsdcUsdPlusAddress = "0x37F382741307eb62f8dF06693c104efd67053299";
 
 
 async function main() {
@@ -40,6 +41,7 @@ async function main() {
 
     let qsPoolWmaticUsdPlus = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolWmaticUsdPlusAddress, wallet);
     let qsPoolUsdPlusWeth = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolUsdPlusWethAddress, wallet);
+    let qsPoolUsdcUsdPlus = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolUsdcUsdPlusAddress, wallet);
 
     let uniV3PoolWmaticUsdc = await ethers.getContractAt(iUniswapV3PoolAbi, uniV3PoolWmaticUsdcAddress, wallet);
     let uniV3PoolUsdcWeth = await ethers.getContractAt(iUniswapV3PoolAbi, uniV3PoolUsdcWethAddress, wallet);
@@ -67,6 +69,7 @@ async function main() {
 
     await printBalancesQsPool(qsPoolWmaticUsdPlus);
     await printBalancesQsPool(qsPoolUsdPlusWeth);
+    await printBalancesQsPool(qsPoolUsdcUsdPlus);
 
 
     async function printBalancesUniV3(pool) {

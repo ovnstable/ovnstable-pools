@@ -30,6 +30,7 @@ let uniV3PoolUsdcWethAddress = "0x45dda9cb7c25131df268515131f647d726f50608"
 // replace addresses from create script
 let qsPoolWmaticUsdPlusAddress = "0x91F670270B86C80Ec92bB6B5914E6532cA967bFB";
 let qsPoolUsdPlusWethAddress = "0x901Debb34469e89FeCA591f5E5336984151fEc39";
+let qsPoolUsdcUsdPlusAddress = "0x37F382741307eb62f8dF06693c104efd67053299";
 
 
 let gasOpts = {
@@ -45,6 +46,7 @@ async function main() {
 
     let qsPoolWmaticUsdPlus = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolWmaticUsdPlusAddress, wallet);
     let qsPoolUsdPlusWeth = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolUsdPlusWethAddress, wallet);
+    let qsPoolUsdcUsdPlus = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolUsdcUsdPlusAddress, wallet);
 
     let uniV3PoolWmaticUsdc = await ethers.getContractAt(iUniswapV3PoolAbi, uniV3PoolWmaticUsdcAddress, wallet);
     let uniV3PoolUsdcWeth = await ethers.getContractAt(iUniswapV3PoolAbi, uniV3PoolUsdcWethAddress, wallet);
@@ -52,23 +54,30 @@ async function main() {
     let usdPlus = await ethers.getContractAt(UsdPlusToken.abi, UsdPlusToken.address, wallet);
     let weth = await ethers.getContractAt(ERC20, wethAddress, wallet);
     let wmatic = await ethers.getContractAt(ERC20, wmaticAddress, wallet);
+    let usdc = await ethers.getContractAt(ERC20, usdcAddress, wallet);
 
 
     await printUserBalances("before");
     // await evmCheckpoint("default");
     try {
 
-        let amountInUsdPlusToWeth = toE6(5000);
-        await swap(uniV3PoolUsdcWeth, qsPoolUsdPlusWeth, usdPlus, weth, amountInUsdPlusToWeth);
-        //
+        // let amountInUsdPlusToWeth = toE6(5000);
+        // await swap(uniV3PoolUsdcWeth, qsPoolUsdPlusWeth, usdPlus, weth, amountInUsdPlusToWeth);
+
         // let amountInUsdPlusToWmatic = toE6(5000);
         // await swap(uniV3PoolWmaticUsdc, qsPoolWmaticUsdPlus, usdPlus, wmatic, amountInUsdPlusToWmatic);
-        //
+
+        // let amountInUsdPlusToUsdc = toE6(1000);
+        // await swap5050(qsPoolUsdcUsdPlus, usdPlus, usdc, amountInUsdPlusToUsdc);
+
         // let amountInWethToUsdPlus = toE18(1);
         // await swap(uniV3PoolUsdcWeth, qsPoolUsdPlusWeth, weth, usdPlus, amountInWethToUsdPlus);
 
         // let amountInWmaticToUsdPlus = toE18(3000);
         // await swap(uniV3PoolWmaticUsdc, qsPoolWmaticUsdPlus, wmatic, usdPlus, amountInWmaticToUsdPlus);
+
+        let amountInUsdcToUsdPlus = toE6(1000);
+        await swap5050(qsPoolUsdcUsdPlus, usdc, usdPlus, amountInUsdcToUsdPlus);
 
     } catch (e) {
         console.log(e);
@@ -99,12 +108,36 @@ async function main() {
         console.log(`-------------------------------------`)
     }
 
+    async function swap5050(qsPool, tokenIn, tokenOut, amountIn) {
+        await printBalancesQsPool(qsPool)
+        let priceBefore = await getPriceQsPool(qsPool);
+
+        let path = [tokenIn.address, tokenOut.address];
+        await tokenIn.approve(qsRouter.address, amountIn.toString());
+        await qsRouter.swapExactTokensForTokens(
+            amountIn.toString(),
+            0,
+            path,
+            wallet.address,
+            MAX_UINT256.toString()
+        );
+
+        await printBalancesQsPool(qsPool)
+
+        let priceAfter = await getPriceQsPool(qsPool);
+        console.log(`--- [Price change]`)
+        console.log(`diff: ${priceAfter - priceBefore}`)
+        console.log(`ratio: ${priceAfter / priceBefore}`)
+        console.log(`-------------------------------------`)
+    }
+
 
     async function printUserBalances(stage) {
         console.log(`--- [Balance ${stage}]`)
         console.log('WETH:      ' + await weth.balanceOf(wallet.address) / 1e18);
         console.log('WMATIC:    ' + await wmatic.balanceOf(wallet.address) / 1e18);
         console.log('USD+:      ' + await usdPlus.balanceOf(wallet.address) / 1e6);
+        console.log('USDC:      ' + await usdc.balanceOf(wallet.address) / 1e6);
         console.log('PoolToken: ' + await qsPoolUsdPlusWeth.balanceOf(wallet.address) / 1e18);
         console.log(`-------------------------------------`)
     }
