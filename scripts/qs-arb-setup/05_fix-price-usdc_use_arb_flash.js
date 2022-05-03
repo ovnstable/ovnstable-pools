@@ -21,6 +21,8 @@ let iUniswapV2Router02Abi = JSON.parse(fs.readFileSync('./abi/IUniswapV2Router02
 let iUniswapV3PoolAbi = JSON.parse(fs.readFileSync('./abi/build/IUniswapV3Pool.json')).abi;
 let iUniswapV3Router02Abi = JSON.parse(fs.readFileSync('./abi/build/ISwapRouterV3.json')).abi;
 
+let ArbitrageQSUsdcAbi = JSON.parse(fs.readFileSync('./abi/build/ArbitrageQSUsdc.json')).abi;
+
 
 let usdcAddress = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174";
 let wethAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
@@ -43,6 +45,9 @@ let qsPoolUsdPlusWethAddress = "0x901Debb34469e89FeCA591f5E5336984151fEc39";
 let qsPoolUsdPlusUsdcAddress = "0x37F382741307eb62f8dF06693c104efd67053299";
 
 
+let arbAddress = "0x99A8cCf9F1dd4920A34cfb6E6AD33d10d3d7483b";
+
+
 let gasOpts = {
     maxFeePerGas: "250000000000",
     maxPriorityFeePerGas: "250000000000"
@@ -52,8 +57,8 @@ async function main() {
 
     let wallet = await initWallet(ethers);
 
-
     let qsRouter = await ethers.getContractAt(iUniswapV2Router02Abi, qsRouterAddress, wallet);
+    let arb = await ethers.getContractAt(ArbitrageQSUsdcAbi, arbAddress, wallet);
 
     let qsPoolUsdPlusUsdc = await ethers.getContractAt(iUniswapV2PairAbi, qsPoolUsdPlusUsdcAddress, wallet);
 
@@ -68,7 +73,7 @@ async function main() {
     let upperChangePriceUsdPlusUsdc = 1.0001; // 1 pp
 
 
-    // await evmCheckpoint("default");
+    await evmCheckpoint("default");
     try {
 
         await fixUsdPlusUsdc();
@@ -77,7 +82,8 @@ async function main() {
     } catch (e) {
         console.log(e);
     }
-    // await evmRestore("default");
+    await evmRestore("default");
+
 
     /**
      * usdc -> qs() -> usd+ -> un() -> usdc
@@ -105,7 +111,6 @@ async function main() {
         let usdcOut = await swapQS(token0, token1, token0Received);
     }
 
-
     async function fixUsdPlusUsdc() {
 
         let qsPool = qsPoolUsdPlusUsdc;
@@ -120,6 +125,7 @@ async function main() {
             upperChangePriceBound
         );
 
+        console.log(`-----   From js:`);
         console.log(`params.skip: ${params.skip}`);
         if (!params.skip) {
             console.log(`params.putUsdPlusToPool: ${params.putUsdPlusToPool}`);
@@ -131,11 +137,48 @@ async function main() {
             console.log(`params.reserves[3]: ${params.reserves[3]}`);
         }
 
+
+        let callParams = {
+            qsPool: qsPool.address,
+            usdc: usdc.address,
+            usdPlus: usdPlus.address,
+            lowerChangePriceBound: new BN(10).pow(new BN(18)).sub(new BN(10).pow(new BN(14))).toString(),
+            upperChangePriceBound: new BN(10).pow(new BN(18)).add(new BN(10).pow(new BN(14))).toString(),
+            qsRouter: qsRouter.address,
+        };
+        console.log(JSON.stringify(callParams, null, 2));
+
+        let arbParams = await arb.getFixParams(callParams)
+
+
+        console.log(JSON.stringify(arbParams));
+        console.log(`-----   From arb:`);
+        console.log(`params.skip: ${arbParams.skip}`);
+        console.log(`params.putUsdPlusToPool: ${arbParams.putUsdPlusToPool}`);
+        console.log(`params.tokens[0]: ${arbParams.tokens.token0}`);
+        console.log(`params.tokens[1]: ${arbParams.tokens.token1}`);
+        console.log(`params.reserves[0]: ${arbParams.reserves.reserve0}`);
+        console.log(`params.reserves[1]: ${arbParams.reserves.reserve1}`);
+        console.log(`params.reserves[2]: ${arbParams.reserves.reserve2}`);
+        console.log(`params.reserves[3]: ${arbParams.reserves.reserve3}`);
+        console.log(`params.usdcIn: ${arbParams.usdcIn}`);
+        console.log(`params.usdcOut: ${arbParams.usdcOut}`);
+
+
         if (params.skip) {
             return;
         }
-        await fix(params);
+
+        let tx = await arb.fixByFlash(callParams);
+        let res = await tx.wait();
+
+
+        balancesCurrent = await balancesQsPool(qsPool);
+        console.log(`balancesCurrent.reserve0: ${balancesCurrent.reserve0}`)
+        console.log(`balancesCurrent.reserve1: ${balancesCurrent.reserve1}`)
+
     }
+
 
 
     async function getFixParams(
