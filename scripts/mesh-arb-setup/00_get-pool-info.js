@@ -15,8 +15,7 @@ let wmaticAddress = "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270";
 
 
 // replace addresses from create script
-// let meshPoolUsdcUsdPlusAddress = "0x68b7cEd0dBA382a0eC705d6d97608B7bA3CD8C55";
-let meshPoolUsdcUsdPlusAddress = "0x9a08dfd9ea8d5c59b9d70653ea43ccccb821db6b";
+let meshPoolUsdcUsdPlusAddress = "0x68b7cEd0dBA382a0eC705d6d97608B7bA3CD8C55";
 
 
 async function main() {
@@ -50,21 +49,21 @@ async function main() {
 
         let price0Per1 = reserve0Normalized / reserve1Normalized;
         let price1Per0 = reserve1Normalized / reserve0Normalized;
-        //
-        // let balances0 = await token0.balanceOf(pool.address);
-        // let balances1 = await token1.balanceOf(pool.address);
-        //
-        // let balances0Normalized = balances0 / 10 ** token0Decimals;
-        // let balances1Normalized = balances1 / 10 ** token1Decimals;
+
+        let balances0 = await token0.balanceOf(pool.address);
+        let balances1 = await token1.balanceOf(pool.address);
+
+        let balances0Normalized = balances0 / 10 ** token0Decimals;
+        let balances1Normalized = balances1 / 10 ** token1Decimals;
 
         console.log(`-- balances for QS pool of ${token0Symbol}/${token1Symbol}`)
         console.log(`token0[${token0Symbol}]: ${reserve0Normalized}`)
-        // console.log(`token0[${token0Symbol}]: ${balances0Normalized}`)
+        console.log(`token0[${token0Symbol}]: ${balances0Normalized}`)
         console.log(`token1[${token1Symbol}]: ${reserve1Normalized}`)
-        // console.log(`token1[${token1Symbol}]: ${balances1Normalized}`)
+        console.log(`token1[${token1Symbol}]: ${balances1Normalized}`)
         console.log(`price0Per1: ${price0Per1}`);
         console.log(`price1Per0: ${price1Per0}`);
-        console.log(`fee: ${await pool.fee()}`);
+        // console.log(`fee: ${await pool.fee()}`);
         console.log(`-------------------------------------`)
     }
 

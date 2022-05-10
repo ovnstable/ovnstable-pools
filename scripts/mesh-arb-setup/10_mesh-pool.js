@@ -103,7 +103,7 @@ async function main() {
     console.log(`somePool fee: ${await somePool.fee()}`);
 
 
-    await somePool.sync();
+    // await somePool.sync();
 
 
 
