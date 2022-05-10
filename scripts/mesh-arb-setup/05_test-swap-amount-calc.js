@@ -84,8 +84,10 @@ async function main() {
 
         let fee = new BN(10);
         let fee100 = new BN(10000);
-        let nominator = reserveOut.mul(amountIn.mul(fee100.sub(fee)));
-        let denominator = reserveIn.mul(fee100).add(amountIn.mul(fee100.sub(fee)));
+
+        let amountInWithFee = amountIn.mul(fee100.sub(fee));
+        let nominator = reserveOut.mul(amountInWithFee);
+        let denominator = reserveIn.mul(fee100).add(amountInWithFee);
 
         let res = nominator.div(denominator)
         console.log(`res: ${res}`)
