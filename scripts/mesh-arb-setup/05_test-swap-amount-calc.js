@@ -54,7 +54,7 @@ async function main() {
         await printBalancesQsPool(meshPoolUsdcUsdPlus)
 
         // let amountInUsdPlusToUsdc = toE6(9.995);
-        let amountInUsdPlusToUsdc = toE6(10);
+        let amountInUsdPlusToUsdc = toE6(1);
         await swap5050(meshPoolUsdcUsdPlus, usdPlus, usdc, amountInUsdPlusToUsdc);
 
         // let amountInUsdcToUsdPlus = toE6(1000);

@@ -64,6 +64,7 @@ async function main() {
         // console.log(`token1[${token1Symbol}]: ${balances1Normalized}`)
         console.log(`price0Per1: ${price0Per1}`);
         console.log(`price1Per0: ${price1Per0}`);
+        console.log(`fee: ${await pool.fee()}`);
         console.log(`-------------------------------------`)
     }
 
