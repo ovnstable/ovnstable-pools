@@ -268,7 +268,7 @@ async function main() {
         console.log(`aIn: ${aIn}`)
 
         let usdcIn = calcAInForWrap(aIn);
-        let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0);
+        let usdcOut = calcAOutForQS(usdcIn, rIn0, rOut0, fee, fee100);
 
         console.log(`USDC for loan: ${usdcIn}`)
         console.log(`USDC after   : ${usdcOut}`)
@@ -294,7 +294,7 @@ async function main() {
         console.log(`aIn: ${aIn}`)
 
         let usdcIn = aIn;
-        let usdcOut = calcAOutOnWrap(calcAOutForQS(aIn, rIn0, rOut0));
+        let usdcOut = calcAOutOnWrap(calcAOutForQS(aIn, rIn0, rOut0, fee, fee100));
         console.log(`USDC for loan: ${usdcIn}`)
         console.log(`USDC after   : ${usdcOut}`)
         console.log(`Lost         : ${usdcIn.sub(usdcOut)}`)
@@ -353,9 +353,7 @@ async function main() {
 
 
     // same to getAmountOut()
-    function calcAOutForQS(aIn, rIn0, rOut0) {
-        let fee100 = new BN(10000);
-        let fee = new BN(10);
+    function calcAOutForQS(aIn, rIn0, rOut0, fee, fee100) {
         let feeR = fee100.sub(fee);
 
         let amountInWithFee = aIn.mul(feeR);
