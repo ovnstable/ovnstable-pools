@@ -9,7 +9,8 @@ let ERC20 = JSON.parse(fs.readFileSync('./abi/ERC20.json'));
 let UsdPlusToken = JSON.parse(fs.readFileSync('./abi/UsdPlusToken.json'));
 
 let iUniswapV2FactoryAbi = JSON.parse(fs.readFileSync('./abi/build/IUniswapV2Factory.json')).abi;
-let iUniswapV2PairAbi = JSON.parse(fs.readFileSync('./abi/build/IUniswapV2Pair.json')).abi;
+// let iUniswapV2PairAbi = JSON.parse(fs.readFileSync('./abi/build/IUniswapV2Pair.json')).abi;
+let IDystopiaPairAbi = JSON.parse(fs.readFileSync('./abi/build/IDystopiaPair.json')).abi;
 
 let dystFactoryAddress = "0x1d21Db6cde1b18c7E47B0F7F42f4b3F68b9beeC9";
 
@@ -45,7 +46,7 @@ async function main() {
 
         let prevInfo = poolInfos[index];
         if (prevInfo !== undefined) {
-            console.log(`loaded info pool: ${prevInfo.index} -> ${prevInfo.pool}: ${prevInfo.token0Symbol}/${prevInfo.token1Symbol} : ${prevInfo.token0}/${prevInfo.token1}`)
+            console.log(`loaded info pool: ${prevInfo.index} -> ${prevInfo.pool}: ${prevInfo.token0Symbol}/${prevInfo.token1Symbol} : ${prevInfo.token0}/${prevInfo.token1} [${prevInfo.stable ? "stable" : "unstable"}]`)
             index = index.subn(1);
             continue
         }
@@ -57,7 +58,7 @@ async function main() {
                     let localIndex = index.toString();
 
                     let poolAddress = await dystFactory.allPairs(localIndex);
-                    let pool = await ethers.getContractAt(iUniswapV2PairAbi, poolAddress, wallet);
+                    let pool = await ethers.getContractAt(IDystopiaPairAbi, poolAddress, wallet);
                     let poolInfo = await getPoolInfo(pool, localIndex);
 
                     resolve(poolInfo)
@@ -71,7 +72,7 @@ async function main() {
         }
 
         for (const poolInfo of await Promise.all(promises)) {
-            console.log(`load info pool: ${poolInfo.index} -> ${poolInfo.pool}: ${poolInfo.token0Symbol}/${poolInfo.token1Symbol} : ${poolInfo.token0}/${poolInfo.token1}`)
+            console.log(`load info pool: ${poolInfo.index} -> ${poolInfo.pool}: ${poolInfo.token0Symbol}/${poolInfo.token1Symbol} : ${poolInfo.token0}/${poolInfo.token1} [${poolInfo.stable ? "stable" : "unstable"}]`)
 
             poolInfos[poolInfo.index] = poolInfo;
         }
@@ -111,7 +112,7 @@ async function main() {
             poolInfo.token1.toString().toLowerCase() === usdPlusAddress
         ) {
             poolInfos_usdPlus[index] = poolInfo;
-            console.log(`- ${poolInfo.pool}: ${poolInfo.token0Symbol}/${poolInfo.token1Symbol}`)
+            console.log(`- ${poolInfo.pool}: ${poolInfo.token0Symbol}/${poolInfo.token1Symbol} [${poolInfo.stable ? "stable" : "unstable"}]`)
         }
 
         index = index.subn(1);
@@ -143,6 +144,8 @@ async function main() {
         let token0Decimals = await decimalsOrNull(token0);
         let token1Decimals = await decimalsOrNull(token1);
 
+        let stable = await pool.stable();
+
         return {
             pool: pool.address,
             index: index.toString(),
@@ -154,6 +157,7 @@ async function main() {
             token1Name: token1Name,
             token0Decimals: token0Decimals,
             token1Decimals: token1Decimals,
+            stable: stable
         }
     }
 
