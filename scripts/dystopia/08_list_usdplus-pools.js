@@ -36,8 +36,6 @@ async function main() {
         poolInfos = JSON.parse(fs.readFileSync(poolInfosFileName, "utf8"));
     }
 
-
-
     let storeEvery = 0;
     let storeEveryCounter = 0;
 
