@@ -6,25 +6,27 @@ const {initWallet} = require("../../utils/network");
 const {ZERO_ADDRESS, MAX_UINT256} = require("@openzeppelin/test-helpers/src/constants");
 const {toEX, toE6} = require("../../utils/decimals");
 const {evmCheckpoint, evmRestore} = require("../../utils/sharedBeforeEach")
+const univ3prices = require("@thanpolas/univ3prices");
 const {toE18} = require("../balancer-stable-pool-test-commons");
 
 
 let ERC20 = JSON.parse(fs.readFileSync('./abi/ERC20.json'));
 let UsdPlusToken = JSON.parse(fs.readFileSync('./abi/UsdPlusToken.json'));
 
-let IDystopiaPairAbi = JSON.parse(fs.readFileSync('./abi/build/IDystopiaPair.json')).abi;
-let IDystopiaRouterAbi = JSON.parse(fs.readFileSync('./abi/build/IDystopiaRouter.json')).abi;
+let iUniswapV2PairAbi = JSON.parse(fs.readFileSync('./abi/build/IUniswapV2Pair.json')).abi;
+let iUniswapV2Router02Abi = JSON.parse(fs.readFileSync('./abi/IUniswapV2Router02.json'));
+let iUniswapV3PoolAbi = JSON.parse(fs.readFileSync('./abi/build/IUniswapV3Pool.json')).abi;
 
 let usdcAddress = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174";
 let wethAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
 let wmaticAddress = "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270";
 
-let dystRouterAddress = "0xbE75Dd16D029c6B32B7aD57A0FD9C1c20Dd2862e"
+let meshRouterAddress = "0x10f4A785F458Bc144e3706575924889954946639"
+
 
 // replace addresses from create script
-let dystPoolWmaticUsdPlusAddress = "0x1A5FEBA5D5846B3b840312Bd04D76ddaa6220170";
-let dystPoolUsdPlusWethAddress = "0xCF107443b87d9F9A6dB946D02CB5df5EF5299c95";
-let dystPoolUsdcUsdPlusAddress = "0x421a018cC5839c4C0300AfB21C725776dc389B1a";
+let meshPoolUsdcUsdPlusAddress = "0x68b7cEd0dBA382a0eC705d6d97608B7bA3CD8C55";
+
 
 
 let gasOpts = {
@@ -36,11 +38,9 @@ async function main() {
 
     let wallet = await initWallet(ethers);
 
-    let dystRouter = await ethers.getContractAt(IDystopiaRouterAbi, dystRouterAddress, wallet);
+    let meshRouter = await ethers.getContractAt(iUniswapV2Router02Abi, meshRouterAddress, wallet);
 
-    let dystPoolWmaticUsdPlus = await ethers.getContractAt(IDystopiaPairAbi, dystPoolWmaticUsdPlusAddress, wallet);
-    let dystPoolUsdPlusWeth = await ethers.getContractAt(IDystopiaPairAbi, dystPoolUsdPlusWethAddress, wallet);
-    let dystPoolUsdcUsdPlus = await ethers.getContractAt(IDystopiaPairAbi, dystPoolUsdcUsdPlusAddress, wallet);
+    let meshPoolUsdcUsdPlus = await ethers.getContractAt(iUniswapV2PairAbi, meshPoolUsdcUsdPlusAddress, wallet);
 
     let usdPlus = await ethers.getContractAt(UsdPlusToken.abi, UsdPlusToken.address, wallet);
     let weth = await ethers.getContractAt(ERC20, wethAddress, wallet);
@@ -52,23 +52,11 @@ async function main() {
     // await evmCheckpoint("default");
     try {
 
-        let amountInUsdPlusToWeth = toE6(5000);
-        await swap(dystPoolUsdPlusWeth, usdPlus, weth, amountInUsdPlusToWeth);
+        // let amountInUsdPlusToUsdc = toE6(10);
+        // await swap5050(meshPoolUsdcUsdPlus, usdPlus, usdc, amountInUsdPlusToUsdc);
 
-        // let amountInUsdPlusToWmatic = toE6(5000);
-        // await swap(dystPoolWmaticUsdPlus, usdPlus, wmatic, amountInUsdPlusToWmatic);
-
-        // let amountInUsdPlusToUsdc = toE6(1000);
-        // await swap5050(dystPoolUsdcUsdPlus, usdPlus, usdc, amountInUsdPlusToUsdc);
-
-        // let amountInWethToUsdPlus = toE18(1);
-        // await swap(dystPoolUsdPlusWeth, weth, usdPlus, amountInWethToUsdPlus);
-
-        // let amountInWmaticToUsdPlus = toE18(3000);
-        // await swap(dystPoolWmaticUsdPlus, wmatic, usdPlus, amountInWmaticToUsdPlus);
-
-        // let amountInUsdcToUsdPlus = toE6(1000);
-        // await swap5050(dystPoolUsdcUsdPlus, usdc, usdPlus, amountInUsdcToUsdPlus);
+        let amountInUsdcToUsdPlus = toE6(10);
+        await swap5050(meshPoolUsdcUsdPlus, usdc, usdPlus, amountInUsdcToUsdPlus);
 
     } catch (e) {
         console.log(e);
@@ -76,43 +64,17 @@ async function main() {
     await printUserBalances("after");
     // await evmRestore("default");
 
-    // for volatile
-    async function swap(qsPool, tokenIn, tokenOut, amountIn) {
-        await printBalancesQsPool(qsPool)
-        let priceBefore = await getPriceQsPool(qsPool);
 
-        await tokenIn.approve(dystRouter.address, amountIn.toString());
-        await dystRouter.swapExactTokensForTokensSimple(
-            amountIn.toString(),
-            0,
-            tokenIn.address,
-            tokenOut.address,
-            false,
-            wallet.address,
-            MAX_UINT256.toString()
-        );
-
-        await printBalancesQsPool(qsPool)
-
-        let priceAfter = await getPriceQsPool(qsPool);
-        console.log(`--- [Price change]`)
-        console.log(`diff: ${priceAfter - priceBefore}`)
-        console.log(`ratio: ${priceAfter / priceBefore}`)
-        console.log(`-------------------------------------`)
-    }
-
-    // for stable
     async function swap5050(qsPool, tokenIn, tokenOut, amountIn) {
         await printBalancesQsPool(qsPool)
         let priceBefore = await getPriceQsPool(qsPool);
 
-        await tokenIn.approve(dystRouter.address, amountIn.toString());
-        await dystRouter.swapExactTokensForTokensSimple(
+        let path = [tokenIn.address, tokenOut.address];
+        await tokenIn.approve(meshRouter.address, amountIn.toString());
+        await meshRouter.swapExactTokensForTokens(
             amountIn.toString(),
             0,
-            tokenIn.address,
-            tokenOut.address,
-            true,
+            path,
             wallet.address,
             MAX_UINT256.toString()
         );
@@ -135,6 +97,9 @@ async function main() {
         console.log('USDC:      ' + await usdc.balanceOf(wallet.address) / 1e6);
         console.log(`-------------------------------------`)
     }
+
+
+
 
 
     async function printBalancesQsPool(pool) {
@@ -165,9 +130,9 @@ async function main() {
 
         console.log(`-- balances for QS pool of ${token0Symbol}/${token1Symbol}`)
         console.log(`token0[${token0Symbol}]: ${reserve0Normalized}`)
-        // console.log(`token0[${token0Symbol}]: ${balances0Normalized}`)
+        console.log(`token0[${token0Symbol}]: ${balances0Normalized}`)
         console.log(`token1[${token1Symbol}]: ${reserve1Normalized}`)
-        // console.log(`token1[${token1Symbol}]: ${balances1Normalized}`)
+        console.log(`token1[${token1Symbol}]: ${balances1Normalized}`)
         console.log(`price0Per1: ${price0Per1}`);
         console.log(`price1Per0: ${price1Per0}`);
         console.log(`-------------------------------------`)

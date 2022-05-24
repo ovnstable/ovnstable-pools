@@ -7,7 +7,7 @@ const {initWallet} = require("../../utils/network");
 
 let ERC20 = JSON.parse(fs.readFileSync('./abi/ERC20.json'));
 
-let iUniswapV2PairAbi = JSON.parse(fs.readFileSync('./abi/build/IUniswapV2Pair.json')).abi;
+let IDystopiaPairAbi = JSON.parse(fs.readFileSync('./abi/build/IDystopiaPair.json')).abi;
 
 let usdcAddress = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174";
 let wethAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
@@ -15,6 +15,8 @@ let wmaticAddress = "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270";
 
 
 // replace addresses from create script
+let dystPoolWmaticUsdPlusAddress = "0x1A5FEBA5D5846B3b840312Bd04D76ddaa6220170";
+let dystPoolUsdPlusWethAddress = "0xCF107443b87d9F9A6dB946D02CB5df5EF5299c95";
 let dystPoolUsdcUsdPlusAddress = "0x421a018cC5839c4C0300AfB21C725776dc389B1a";
 
 
@@ -22,9 +24,13 @@ async function main() {
 
     let wallet = await initWallet(ethers);
 
-    let dystPoolUsdcUsdPlus = await ethers.getContractAt(iUniswapV2PairAbi, dystPoolUsdcUsdPlusAddress, wallet);
+    let dystPoolWmaticUsdPlus = await ethers.getContractAt(IDystopiaPairAbi, dystPoolWmaticUsdPlusAddress, wallet);
+    let dystPoolUsdPlusWeth = await ethers.getContractAt(IDystopiaPairAbi, dystPoolUsdPlusWethAddress, wallet);
+    let dystPoolUsdcUsdPlus = await ethers.getContractAt(IDystopiaPairAbi, dystPoolUsdcUsdPlusAddress, wallet);
 
 
+    await printBalancesQsPool(dystPoolWmaticUsdPlus);
+    await printBalancesQsPool(dystPoolUsdPlusWeth);
     await printBalancesQsPool(dystPoolUsdcUsdPlus);
 
 
@@ -56,7 +62,9 @@ async function main() {
         let balances0Normalized = balances0 / 10 ** token0Decimals;
         let balances1Normalized = balances1 / 10 ** token1Decimals;
 
-        console.log(`-- balances for QS pool of ${token0Symbol}/${token1Symbol}`)
+        let stable = await pool.stable();
+
+        console.log(`-- balances for QS pool of ${token0Symbol}/${token1Symbol} [${stable ? "stable" : "unstable"}]`)
         console.log(`token0[${token0Symbol}]: ${reserve0Normalized}`)
         console.log(`token0[${token0Symbol}]: ${balances0Normalized}`)
         console.log(`token1[${token1Symbol}]: ${reserve1Normalized}`)
