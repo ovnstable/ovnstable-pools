@@ -142,7 +142,8 @@ async function main() {
     // console.log(ethPrice);
     let ethPriceUsd = parseFloat(ethPrice.data.result.ethPriceUsd.toFixed(20).toString());
 
-    let time = Math.floor(new Date(new Date().getTime() - (24 * 60 * 60 * 1000)).getTime() / 1000)
+    let timeEnd = Math.floor(new Date().getTime() / 1000)
+    let timeStart = Math.floor(new Date(timeEnd * 1000 - (24 * 60 * 60 * 1000)).getTime() / 1000)
 
 
     let v = "{\"query\":\"{\\n  pairs(first: 1000) {\\n    address\\n    decimals\\n    name\\n    symbol\\n    isStable\\n    rewardType\\n    token0 {\\n      address\\n      chainId\\n      symbol\\n      name\\n      decimals\\n      isWhitelisted\\n      balance\\n      logoURI\\n      __typename\\n    }\\n    token1 {\\n      address\\n      chainId\\n      symbol\\n      name\\n      decimals\\n      isWhitelisted\\n      balance\\n      logoURI\\n      __typename\\n    }\\n    reserve0\\n    reserve1\\n    token0Price\\n    token1Price\\n    totalSupply\\n    claimable0\\n    claimable1\\n    gauge {\\n      address\\n      balance\\n      apr\\n      totalSupply\\n      reserve0\\n      reserve1\\n      weight\\n      weightPercent\\n      bribeAddress\\n      bribesEarned\\n      rewardsEarned\\n      bribe {\\n        address\\n        rewardRate\\n        rewardAmount\\n        __typename\\n      }\\n      __typename\\n    }\\n    gaugebribes {\\n      address\\n      rewardRate\\n      rewardAmount\\n      __typename\\n    }\\n    __typename\\n  }\\n}\",\"variables\":{}}";
@@ -170,22 +171,24 @@ async function main() {
         };
     }
 
+    let logEnabled = false;
+
+    let toFile = "";
 
     index = count.subn(1);
     while (index.gte(zero)) {
         let poolInfo = poolInfos[index];
 
         poolInfos_usdPlus[index] = poolInfo;
-        // if (poolInfo.pool.toString().toLowerCase() !== "0x421a018cC5839c4C0300AfB21C725776dc389B1a".toLowerCase()) {
-        // if (poolInfo.pool.toString().toLowerCase() !== "0xeE393d3d81F38aa17b4E2be1DaD1bFd385C7bCf0".toLowerCase()) {
-        // if(poolInfo.pool.toString().toLowerCase()!== "0x1a5feba5d5846b3b840312bd04d76ddaa6220170".toLowerCase()){
-        // if(poolInfo.pool.toString().toLowerCase()!== "0x72e7b712F0b3D13473C7acebfACC193229A12b91".toLowerCase()){
-        // if(poolInfo.pool.toString().toLowerCase()!== "0xCE1923D2242BBA540f1d56c8E23b1FBEAe2596dc".toLowerCase()){
-        // if (poolInfo.pool.toString().toLowerCase() !== "0x60c088234180b36EDcec7AA8Aa23912Bb6bed114".toLowerCase()) {
-        //     index = index.subn(1);
-        //     continue;
-        // }
 
+
+        if (logEnabled) {
+            // if (poolInfo.pool.toString().toLowerCase() !== "0x5A31F830225936CA28547Ec3018188af44F21467".toLowerCase()) {
+            if (poolInfo.pool.toString().toLowerCase() !== "0xCE1923D2242BBA540f1d56c8E23b1FBEAe2596dc".toLowerCase()) {
+                index = index.subn(1);
+                continue;
+            }
+        }
 
 
         let totalWeight = (await gaugesContract.totalWeight()).toString();
@@ -207,77 +210,151 @@ async function main() {
         // console.log(`totalWeight: ${totalWeight}  poolWeight: ${poolWeight}`)
 
         let balance = balances[poolInfo.pool.toString().toLowerCase()];
-        let info = await axios.get(`https://www.dextools.io/chain-polygon/api/pair/info?pair=${poolInfo.pool}`)
-        // console.log(info)
+
+        let info;
+        try {
+            info = await axios.get(`https://www.dextools.io/chain-polygon/api/pair/info?pair=${poolInfo.pool}`)
+        } catch {
+            info = await axios.get(`https://www.dextools.io/chain-polygon/api/pair/info?pair=${poolInfo.pool}`)
+        }
+
+        if (logEnabled) {
+            console.log(info)
+        }
 
         let tokenMain;
-        if (info.data.info !== undefined) {
-            tokenMain = info.data.info.address.toLowerCase();
-
-        } else if (info.data.token !== undefined) {
-            tokenMain = info.data.token.id.toLowerCase();
-        } else if (info.data.tokenIndex !== undefined) {
+        if (info.data.tokenIndex !== undefined) {
             if (info.data.tokenIndex === 0) {
                 tokenMain = info.data.token0.id.toLowerCase();
             } else {
                 tokenMain = info.data.token1.id.toLowerCase();
             }
+        } else if (info.data.info !== undefined) {
+            tokenMain = info.data.info.address.toLowerCase();
+
+        } else if (info.data.token !== undefined) {
+            tokenMain = info.data.token.id.toLowerCase();
         } else if (Object.keys(info.data).length === 0) {
             // console.log(info)
-            console.log(`${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t-\t-\t${totalWeight}\t${poolWeight}`)
+            console.log(`${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t-\t-\t${totalWeight}\t${poolWeight}`)
+
+            toFile += `${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t0\t0\t${totalWeight}\t${poolWeight}\n`;
+
             // tokenMain = info.data.token.id.toLowerCase();
 
             index = index.subn(1);
             continue;
         } else {
             console.log(info)
-            console.log(`${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}`)
+            console.log(`${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}`)
             tokenMain = info.data.token.id.toLowerCase();
 
         }
 
 
-        let resp = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${time}-0`)
+        let status = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer-status?pair=${poolInfo.pool}`)
+        if (logEnabled) {
+            console.log(`status: ${status.data}`)
+        }
+        let timePoint = parseInt(status.data.toString().split("-")[0]);
+        if (logEnabled) {
+            console.log(`timePoint: ${timePoint}`)
+        }
+
+        if (logEnabled) {
+            console.log(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timePoint}-0&h=1`)
+            console.log(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timePoint}-0`)
+            console.log(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timeStart}-0`)
+            console.log(`${new Date(timeStart * 1000)}`)
+        }
+        // let resp = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timeStart}-0&h=1`)
+        // let resp2 = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timeStart}-0`)
+
+
+        let swaps;
+
+        if (timeStart < timePoint) {
+            if (logEnabled) {
+                console.log(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timePoint}-0&h=1`)
+                console.log(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timePoint}-0`)
+                console.log(`${new Date(timeStart * 1000)}`)
+            }
+            let beforeTimePointResp = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timePoint}-0&h=1`)
+            swaps = beforeTimePointResp.data.result;
+            if (logEnabled) {
+                console.log(swaps.length)
+            }
+            let afterTimePointResp = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timePoint}-0`)
+            swaps = swaps.concat(afterTimePointResp.data.result);
+            if (logEnabled) {
+                console.log(swaps.length)
+            }
+        } else {
+            if (logEnabled) {
+                console.log(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timeStart}-0`)
+                console.log(`${new Date(timeStart * 1000)}`)
+            }
+            let afterStartTimeResp = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timeStart}-0`)
+            swaps = afterStartTimeResp.data.result;
+            if (logEnabled) {
+                console.log(swaps.length)
+            }
+        }
 
         // console.log(resp.data);
+        // console.log(resp.data.result[0]);
 
         let lastTokenPriceInEth = 0;
+        let lastTokenPriceInEthTimestamp = 0;
         let dailyVolumeInUsd = 0;
-        let arr = resp.data.result;
-        for (const arrElement of arr) {
-            let amountETH = parseFloat(arrElement.amountETH.toFixed(20).toString());
-            // let price = parseFloat(arrElement.priceETH.toFixed(20).toString());
-            let amountToken = parseFloat(arrElement.amountToken.toFixed(20).toString());
+        // let arr = resp.data.result;
+
+
+        let i = 0;
+        for (const swapInfo of swaps) {
+            if (swapInfo.timestamp < timeStart || timeEnd < swapInfo.timestamp) {
+                if (logEnabled) {
+                    console.log(`${i} skip ${new Date(swapInfo.timestamp * 1000)}`)
+                }
+                i++;
+                continue;
+            }
+
+            let amountETH = parseFloat(swapInfo.amountETH.toFixed(20).toString());
+            // let price = parseFloat(swapInfo.priceETH.toFixed(20).toString());
+            let amountToken = parseFloat(swapInfo.amountToken.toFixed(20).toString());
             let price = amountToken / amountETH;
-            if (lastTokenPriceInEth === 0) {
+            if (lastTokenPriceInEth === 0 || lastTokenPriceInEthTimestamp < swapInfo.timestamp) {
                 // сколько в эфире стоил основной токен при последнем обмене
                 lastTokenPriceInEth = amountToken / amountETH;
             }
 
-            let priceUsd = parseFloat(arrElement.price.toFixed(20).toString());
-            let priceEth = parseFloat(arrElement.priceETH.toFixed(20).toString());
+            let priceUsd = parseFloat(swapInfo.price.toFixed(20).toString());
+            let priceEth = parseFloat(swapInfo.priceETH.toFixed(20).toString());
 
             let priceUsdPerEth = priceUsd / priceEth;
 
-            // console.log(`amountETH: ${amountETH}  price: ${price}  priceUsdPerEth: ${priceUsdPerEth}`)
+            if (logEnabled) {
+                console.log(`${i} amountETH: ${amountETH}  price: ${price}  priceUsdPerEth: ${priceUsdPerEth}\t${new Date(swapInfo.timestamp * 1000)}`)
+            }
             dailyVolumeInUsd += amountETH * priceUsdPerEth;
+            i++;
         }
-        // console.log("total: " + dailyVolumeInUsd)
-        // let dailyVolumeInUsd = dailyVolumeInUsd * ethPriceUsd
-
-        // console.log("total: " + dailyVolumeInUsd)
-        // console.log(`ethPriceUsd: ${ethPriceUsd}  time: ${time}`)
-        // console.log(`lastTokenPriceInEth: ${lastTokenPriceInEth}`)
-
+        if (logEnabled) {
+            console.log("total: " + dailyVolumeInUsd)
+            console.log(`ethPriceUsd: ${ethPriceUsd}  time: ${timeStart}`)
+            console.log(`lastTokenPriceInEth: ${lastTokenPriceInEth}`)
+        }
         let poolSize = 0;
 
-        if(dailyVolumeInUsd !== 0) {
-
-            // console.log(`tokenMain: ${tokenMain}`)
-            // console.log(`balance.token0address: ${balance.token0address}`)
-            // console.log(`balance.reserve0: ${balance.reserve0}`)
-            // console.log(`balance.reserve1: ${balance.reserve1}`)
-            // console.log(`balance.token0Price: ${balance.token0Price}`)
+        if (dailyVolumeInUsd !== 0) {
+            if (logEnabled) {
+                console.log(`tokenMain: ${tokenMain}`)
+                console.log(`balance.token0address: ${balance.token0address}`)
+                console.log(`balance.reserve0: ${balance.reserve0}`)
+                console.log(`balance.reserve1: ${balance.reserve1}`)
+                console.log(`balance.token0Price: ${balance.token0Price}`)
+            }
             if (tokenMain === balance.token0address) {
                 poolSize = balance.reserve0;
                 poolSize += balance.reserve1 * balance.token0Price;
@@ -287,17 +364,23 @@ async function main() {
             }
 
 
-            // console.log("poolSize: " + poolSize)
+            if (logEnabled) {
+                console.log("poolSize: " + poolSize)
+            }
             poolSize = poolSize / lastTokenPriceInEth * ethPriceUsd
-            // console.log("poolSize: " + poolSize)
-
+            if (logEnabled) {
+                console.log("poolSize: " + poolSize)
+            }
         }
 
-        console.log(`${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${poolSize}\t${dailyVolumeInUsd}\t${totalWeight}\t${poolWeight}`)
+        console.log(`${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${poolSize.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}`)
+        toFile += `${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${poolSize.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}\n`;
 
         index = index.subn(1);
     }
     console.log(`--------------------------`)
+
+    fs.writeFileSync(`dystopia_votes_report_${timeStart}-${timeEnd}`, toFile);
 
 
     // --------------------------------------------------------------------------
@@ -369,7 +452,6 @@ async function main() {
         }
     }
 }
-
 
 
 main()
