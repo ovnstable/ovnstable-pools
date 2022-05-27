@@ -169,8 +169,8 @@ async function main() {
 
 
         if (logEnabled) {
-            // if (poolInfo.pool.toString().toLowerCase() !== "0x5A31F830225936CA28547Ec3018188af44F21467".toLowerCase()) {
-            if (poolInfo.pool.toString().toLowerCase() !== "0x1A5FEBA5D5846B3b840312Bd04D76ddaa6220170".toLowerCase()) {
+            if (poolInfo.pool.toString().toLowerCase() !== "0x5A31F830225936CA28547Ec3018188af44F21467".toLowerCase()) {
+            // if (poolInfo.pool.toString().toLowerCase() !== "0x1A5FEBA5D5846B3b840312Bd04D76ddaa6220170".toLowerCase()) {
                 index = index.subn(1);
                 continue;
             }
@@ -333,92 +333,98 @@ async function main() {
         }
         let poolSize = 0;
 
-        // let bribesUsd = 0.;
-        if (dailyVolumeInUsd !== 0) {
-            if (logEnabled) {
-                console.log(`tokenMain: ${tokenMain}`)
-                console.log(`balance.token0address: ${balance.token0address}`)
-                console.log(`balance.reserve0: ${balance.reserve0}`)
-                console.log(`balance.reserve1: ${balance.reserve1}`)
-                console.log(`balance.token0Price: ${balance.token0Price}`)
-            }
+        let tvlRes = await tvl(balance);
 
-            let token0PriceUsd;
-            let token1PriceUsd;
-
-            if (tokenMain === balance.token0address) {
-                token0PriceUsd = ethPriceUsd / lastTokenPriceInEth;
-                token1PriceUsd = token0PriceUsd * balance.token0Price;
-
-                poolSize = balance.reserve0;
-                poolSize += balance.reserve1 * balance.token0Price;
-                if (logEnabled) {
-                    console.log("poolSize: " + poolSize)
-                }
-                poolSize = poolSize * token0PriceUsd;
-            } else {
-                token1PriceUsd = ethPriceUsd / lastTokenPriceInEth;
-                token0PriceUsd = token1PriceUsd / balance.token0Price;
-
-                poolSize = balance.reserve1;
-                poolSize += balance.reserve0 / balance.token0Price;
-                if (logEnabled) {
-                    console.log("poolSize: " + poolSize)
-                }
-                poolSize = poolSize * token1PriceUsd;
-            }
-
-            if (logEnabled) {
-                console.log(`token0PriceUsd: ${token0PriceUsd}`)
-                console.log(`token1PriceUsd: ${token1PriceUsd}`)
-                console.log("poolSize: " + poolSize)
-            }
-
-
-            // let bribes = await getRewardForPool(poolInfo.pool);
-            // if (logEnabled) {
-            //     console.log(bribes.length);
-            //     for (const bribe of bribes) {
-            //         console.log(`bribe: ${bribe.symbol} ${bribe.rewardAmount.toString()}`);
-            //     }
-            // }
-            //
-            // for (const bribe of bribes) {
-            //     if (bribe.rewardAmount.eq(new BN(0)) || bribe.decimals === null) {
-            //         continue;
-            //     }
-            //
-            //     console.log(`bribe: ${bribe.symbol} ${bribe.rewardAmount.toString()}`);
-            //
-            //     let priceE18;
-            //     if (bribe.token.toLowerCase() === balance.token0address) {
-            //         priceE18 = priceToBN_E18(token0PriceUsd);
-            //     } else if (bribe.token.toLowerCase() === balance.token1address) {
-            //         priceE18 = priceToBN_E18(token1PriceUsd);
-            //     } else {
-            //         priceE18 = new BN(0);
-            //     }
-            //     console.log(`priceE18: ${priceE18}`);
-            //     console.log(`bribe.decimals: ${bribe.decimals}`);
-            //     bribe.rewardUsd = bribe.rewardAmount
-            //         .mul(priceE18)
-            //         .div(new BN(10).pow(new BN(18)))
-            //         .div(new BN(10).pow(new BN(bribe.decimals.toString())))
-            //         .toNumber()
-            //
-            //     console.log(`rewardUsd: ${bribe.rewardUsd}`);
-            //
-            //     bribesUsd = bribesUsd + bribe.rewardUsd;
-            // }
-            //
-            // console.log(`total bribesUsd: ${bribesUsd}`);
+        if (logEnabled) {
+            console.log(`tvl: ${tvlRes}`)
         }
+
+        // // let bribesUsd = 0.;
+        // if (dailyVolumeInUsd !== 0) {
+        //     if (logEnabled) {
+        //         console.log(`tokenMain: ${tokenMain}`)
+        //         console.log(`balance.token0address: ${balance.token0address}`)
+        //         console.log(`balance.reserve0: ${balance.reserve0}`)
+        //         console.log(`balance.reserve1: ${balance.reserve1}`)
+        //         console.log(`balance.token0Price: ${balance.token0Price}`)
+        //     }
+        //
+        //     let token0PriceUsd;
+        //     let token1PriceUsd;
+        //
+        //     if (tokenMain === balance.token0address) {
+        //         token0PriceUsd = ethPriceUsd / lastTokenPriceInEth;
+        //         token1PriceUsd = token0PriceUsd * balance.token0Price;
+        //
+        //         poolSize = balance.reserve0;
+        //         poolSize += balance.reserve1 * balance.token0Price;
+        //         if (logEnabled) {
+        //             console.log("poolSize: " + poolSize)
+        //         }
+        //         poolSize = poolSize * token0PriceUsd;
+        //     } else {
+        //         token1PriceUsd = ethPriceUsd / lastTokenPriceInEth;
+        //         token0PriceUsd = token1PriceUsd / balance.token0Price;
+        //
+        //         poolSize = balance.reserve1;
+        //         poolSize += balance.reserve0 / balance.token0Price;
+        //         if (logEnabled) {
+        //             console.log("poolSize: " + poolSize)
+        //         }
+        //         poolSize = poolSize * token1PriceUsd;
+        //     }
+        //
+        //     if (logEnabled) {
+        //         console.log(`token0PriceUsd: ${token0PriceUsd}`)
+        //         console.log(`token1PriceUsd: ${token1PriceUsd}`)
+        //         console.log("poolSize: " + poolSize)
+        //     }
+        //
+        //
+        //     // let bribes = await getRewardForPool(poolInfo.pool);
+        //     // if (logEnabled) {
+        //     //     console.log(bribes.length);
+        //     //     for (const bribe of bribes) {
+        //     //         console.log(`bribe: ${bribe.symbol} ${bribe.rewardAmount.toString()}`);
+        //     //     }
+        //     // }
+        //     //
+        //     // for (const bribe of bribes) {
+        //     //     if (bribe.rewardAmount.eq(new BN(0)) || bribe.decimals === null) {
+        //     //         continue;
+        //     //     }
+        //     //
+        //     //     console.log(`bribe: ${bribe.symbol} ${bribe.rewardAmount.toString()}`);
+        //     //
+        //     //     let priceE18;
+        //     //     if (bribe.token.toLowerCase() === balance.token0address) {
+        //     //         priceE18 = priceToBN_E18(token0PriceUsd);
+        //     //     } else if (bribe.token.toLowerCase() === balance.token1address) {
+        //     //         priceE18 = priceToBN_E18(token1PriceUsd);
+        //     //     } else {
+        //     //         priceE18 = new BN(0);
+        //     //     }
+        //     //     console.log(`priceE18: ${priceE18}`);
+        //     //     console.log(`bribe.decimals: ${bribe.decimals}`);
+        //     //     bribe.rewardUsd = bribe.rewardAmount
+        //     //         .mul(priceE18)
+        //     //         .div(new BN(10).pow(new BN(18)))
+        //     //         .div(new BN(10).pow(new BN(bribe.decimals.toString())))
+        //     //         .toNumber()
+        //     //
+        //     //     console.log(`rewardUsd: ${bribe.rewardUsd}`);
+        //     //
+        //     //     bribesUsd = bribesUsd + bribe.rewardUsd;
+        //     // }
+        //     //
+        //     // console.log(`total bribesUsd: ${bribesUsd}`);
+        // }
         //
         // console.log(`${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${poolSize.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}\t${bribesUsd.toFixed(2)}`)
         // toFile += `${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${poolSize.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}\t${bribesUsd.toFixed(2)}\n`;
 
-        console.log(`${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${poolSize.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}`)
-        toFile += `${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${poolSize.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}\n`;
+        console.log(`${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${tvlRes.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}`)
+        toFile += `${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${tvlRes.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}\n`;
 
         index = index.subn(1);
     }
@@ -445,6 +451,90 @@ async function main() {
         return priceAtE18;
     }
 
+
+    async function tvl(balance) {
+
+        if (balance.token0address === '0x39ab6574c289c3ae4d88500eec792ab5b947a5eb' || balance.token1address === '0x39ab6574c289c3ae4d88500eec792ab5b947a5eb') {
+            let a, b, totalVolumeInUsdInReserve1, totalVolumeInUsdInReserve0;
+            if (balance.token0address === '0x39ab6574c289c3ae4d88500eec792ab5b947a5eb') {
+
+
+                b = await axios.get('https://api.dexscreener.io/latest/dex/pairs/polygon/0x1e08a5b6a1694bc1a65395db6f4c506498daa349')
+                totalVolumeInUsdInReserve0 = BigNumber(
+                    balance.reserve0
+                ).multipliedBy(BigNumber(b.data.pair.priceUsd));
+
+                a = await axios.get(
+                    `https://api.coingecko.com/api/v3/simple/token_price/polygon-pos?contract_addresses=${balance.token1address}&vs_currencies=usd`
+                );
+                if(a.data[balance.token1address] === undefined) {
+                    return 0;
+                }
+                totalVolumeInUsdInReserve1 = BigNumber(
+                    balance.reserve1
+                ).multipliedBy(BigNumber(a.data[balance.token1address].usd));
+
+                // console.log(`t0: ${totalVolumeInUsdInReserve0} price: ${b.data.pair.priceUsd}`)
+                // console.log(`t1: ${totalVolumeInUsdInReserve1} price: ${a.data[pair.token1.address].usd}`)
+            } else {
+                a = await axios.get(
+                    `https://api.coingecko.com/api/v3/simple/token_price/polygon-pos?contract_addresses=${balance.token0address}&vs_currencies=usd`
+                );
+                if(a.data[balance.token0address] === undefined) {
+                    return 0;
+                }
+
+                totalVolumeInUsdInReserve0 = BigNumber(
+                    balance.reserve0
+                ).multipliedBy(BigNumber(a.data[balance.token0address].usd));
+
+                b = await axios.get('https://api.dexscreener.io/latest/dex/pairs/polygon/0x1e08a5b6a1694bc1a65395db6f4c506498daa349')
+
+                totalVolumeInUsdInReserve1 = BigNumber(
+                    balance.reserve1
+                ).multipliedBy(BigNumber(b.data.pair.priceUsd));
+
+                // console.log(`t0: ${totalVolumeInUsdInReserve0} price: ${a.data[pair.token0.address].usd}`)
+                // console.log(`t1: ${totalVolumeInUsdInReserve1} price: ${b.data.pair.priceUsd}`)
+            }
+
+
+            const totalVolumeInUsd =
+                Number(totalVolumeInUsdInReserve0) +
+                Number(totalVolumeInUsdInReserve1);
+            return Number(totalVolumeInUsd);
+
+        } else {
+            const a = await axios.get(
+                `https://api.coingecko.com/api/v3/simple/token_price/polygon-pos?contract_addresses=${balance.token0address},${balance.token1address}&vs_currencies=usd`
+            );
+            // console.log(`a.data: ${balance.token0address},${balance.token1address}`)
+            // console.log(`a.data: ${JSON.stringify(a.data, null,2)}`)
+
+            if(a.data[balance.token0address] === undefined) {
+                return 0;
+            }
+            if(a.data[balance.token1address] === undefined) {
+                return 0;
+            }
+            const totalVolumeInUsdInReserve0 = BigNumber(
+                balance.reserve0
+            ).multipliedBy(BigNumber(a.data[balance.token0address].usd));
+
+            const totalVolumeInUsdInReserve1 = BigNumber(
+                balance.reserve1
+            ).multipliedBy(BigNumber(a.data[balance.token1address].usd));
+
+
+            // console.log(`t0: ${totalVolumeInUsdInReserve0} price: ${a.data[balance.token0address].usd}`)
+            // console.log(`t1: ${totalVolumeInUsdInReserve1} price: ${a.data[balance.token1address].usd}`)
+
+            const totalVolumeInUsd =
+                Number(totalVolumeInUsdInReserve0) +
+                Number(totalVolumeInUsdInReserve1);
+            return Number(totalVolumeInUsd);
+        }
+    }
 
     async function getRewardForPool(poolAddress) {
 
