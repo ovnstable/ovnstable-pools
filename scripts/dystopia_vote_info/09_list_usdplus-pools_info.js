@@ -4,28 +4,25 @@ const ethers = hre.ethers;
 const BN = require('bn.js');
 const {initWallet} = require("../../utils/network");
 const axios = require('axios')
-const https = require('https')
 
 let ERC20 = JSON.parse(fs.readFileSync('./abi/ERC20.json'));
-let UsdPlusToken = JSON.parse(fs.readFileSync('./abi/UsdPlusToken.json'));
 
 let iUniswapV2FactoryAbi = JSON.parse(fs.readFileSync('./abi/build/IUniswapV2Factory.json')).abi;
-// let iUniswapV2PairAbi = JSON.parse(fs.readFileSync('./abi/build/IUniswapV2Pair.json')).abi;
 let IDystopiaPairAbi = JSON.parse(fs.readFileSync('./abi/build/IDystopiaPair.json')).abi;
 
 let dystFactoryAddress = "0x1d21Db6cde1b18c7E47B0F7F42f4b3F68b9beeC9";
-const request = require('sync-request');
 const BigNumber = require("bignumber.js");
+const {ZERO_ADDRESS} = require("@openzeppelin/test-helpers/src/constants");
 
 const VOTER_ADDRESS = '0x649BdF58B09A0Cd4Ac848b42c4B5e1390A72A49A'
 const VOTER_ABI = require('./voterABI').voterABI;
+const BRIBE_ABI = require('./bribeABI').bribeABI;
+const GAUGE_ABI = require('./gaugeABI').gaugeABI;
 
 async function main() {
 
     let wallet = await initWallet(ethers);
     let dystFactory = await ethers.getContractAt(iUniswapV2FactoryAbi, dystFactoryAddress, wallet);
-
-    let usdPlusAddress = UsdPlusToken.address.toString().toLowerCase();
 
     const gaugesContract = await ethers.getContractAt(
         VOTER_ABI,
@@ -41,7 +38,6 @@ async function main() {
     makeDirIfNeed(dir);
 
     let poolInfosFileName = `${dir}/dystopiaPools.json`
-    let usdPlusPoolInfosFileName = `${dir}/dystopiaPools_usdPlus.json`
 
     let poolInfos = {};
     if (fs.existsSync(poolInfosFileName)) {
@@ -57,7 +53,7 @@ async function main() {
 
         let prevInfo = poolInfos[index];
         if (prevInfo !== undefined) {
-            console.log(`loaded info pool: ${prevInfo.index} -> ${prevInfo.pool}: ${prevInfo.token0Symbol}/${prevInfo.token1Symbol} : ${prevInfo.token0}/${prevInfo.token1} [${prevInfo.stable ? "stable" : "unstable"}]`)
+            // console.log(`loaded info pool: ${prevInfo.index} -> ${prevInfo.pool}: ${prevInfo.token0Symbol}/${prevInfo.token1Symbol} : ${prevInfo.token0}/${prevInfo.token1} [${prevInfo.stable ? "stable" : "unstable"}]`)
             index = index.subn(1);
             continue
         }
@@ -83,23 +79,14 @@ async function main() {
         }
 
         for (const poolInfo of await Promise.all(promises)) {
-            console.log(`load info pool: ${poolInfo.index} -> ${poolInfo.pool}: ${poolInfo.token0Symbol}/${poolInfo.token1Symbol} : ${poolInfo.token0}/${poolInfo.token1} [${poolInfo.stable ? "stable" : "unstable"}]`)
+            // console.log(`load info pool: ${poolInfo.index} -> ${poolInfo.pool}: ${poolInfo.token0Symbol}/${poolInfo.token1Symbol} : ${poolInfo.token0}/${poolInfo.token1} [${poolInfo.stable ? "stable" : "unstable"}]`)
 
             poolInfos[poolInfo.index] = poolInfo;
         }
 
-        // let poolAddress = await dystFactory.allPairs(index.toString());
-        //
-        // let pool = await ethers.getContractAt(iUniswapV2PairAbi, poolAddress, wallet);
-        // let poolInfo = await getPoolInfo(pool, index);
-        //
-        // poolInfos[index] = poolInfo;
-        // console.log(`pool: ${index} -> ${poolAddress}: ${poolInfo.token0Symbol}/${poolInfo.token1Symbol} : ${poolInfo.token0}/${poolInfo.token1}`)
-        // index = index.subn(1);
-
         if (storeEveryCounter >= storeEvery) {
             fs.writeFileSync(poolInfosFileName, JSON.stringify(poolInfos, null, 2));
-            console.log(`stored`)
+            // console.log(`stored`)
             storeEveryCounter = 0;
         } else {
             storeEveryCounter++;
@@ -113,31 +100,30 @@ async function main() {
 
     let poolInfos_usdPlus = {};
 
-    console.log(`--- dystopia usdPlus pools:`)
-
-    index = count.subn(1);
-    while (index.gte(zero)) {
-        let poolInfo = poolInfos[index];
-
-        if (poolInfo.token0.toString().toLowerCase() === usdPlusAddress ||
-            poolInfo.token1.toString().toLowerCase() === usdPlusAddress
-        ) {
-            poolInfos_usdPlus[index] = poolInfo;
-            console.log(`- ${poolInfo.pool}: ${poolInfo.token0Symbol}/${poolInfo.token1Symbol} [${poolInfo.stable ? "stable" : "unstable"}]`)
-        }
-
-        index = index.subn(1);
-    }
-    console.log(`--------------------------`)
-
-    fs.writeFileSync(usdPlusPoolInfosFileName, JSON.stringify(poolInfos_usdPlus, null, 2));
-    console.log(`usdPlus file stored`)
-
-    console.log(`--- dystopia pools:`)
-
+    const config = {
+        headers: {
+            // "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0",
+            "Host": "www.dextools.io",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0",
+            "Accept": "application/json",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Content-Type": "application/json",
+            "DNT": "1",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+            "Referer": "https://www.dextools.io/app/polygon/pair-explorer/0x1a5feba5d5846b3b840312bd04d76ddaa6220170",
+            "Connection": "keep-alive",
+            "Cookie": "_pk_id.4.b299=1b1b0bdf49f8fdb7.1653496983.; _pk_ses.4.b299=1",
+            "Pragma": "no-cache",
+            "Cache-Control": "no-cache",
+            "TE": "trailers",
+        },
+    };
 
 // https://www.dextools.io/chain-polygon/api/common/ethPrice
-    let ethPrice = await axios.get('https://www.dextools.io/chain-polygon/api/common/ethPrice');
+    let ethPrice = await axios.get('https://www.dextools.io/chain-polygon/api/common/ethPrice', config);
 
     // console.log(ethPrice);
     let ethPriceUsd = parseFloat(ethPrice.data.result.ethPriceUsd.toFixed(20).toString());
@@ -184,7 +170,7 @@ async function main() {
 
         if (logEnabled) {
             // if (poolInfo.pool.toString().toLowerCase() !== "0x5A31F830225936CA28547Ec3018188af44F21467".toLowerCase()) {
-            if (poolInfo.pool.toString().toLowerCase() !== "0xCE1923D2242BBA540f1d56c8E23b1FBEAe2596dc".toLowerCase()) {
+            if (poolInfo.pool.toString().toLowerCase() !== "0x1A5FEBA5D5846B3b840312Bd04D76ddaa6220170".toLowerCase()) {
                 index = index.subn(1);
                 continue;
             }
@@ -213,9 +199,9 @@ async function main() {
 
         let info;
         try {
-            info = await axios.get(`https://www.dextools.io/chain-polygon/api/pair/info?pair=${poolInfo.pool}`)
+            info = await axios.get(`https://www.dextools.io/chain-polygon/api/pair/info?pair=${poolInfo.pool}`, config)
         } catch {
-            info = await axios.get(`https://www.dextools.io/chain-polygon/api/pair/info?pair=${poolInfo.pool}`)
+            info = await axios.get(`https://www.dextools.io/chain-polygon/api/pair/info?pair=${poolInfo.pool}`, config)
         }
 
         if (logEnabled) {
@@ -252,7 +238,7 @@ async function main() {
         }
 
 
-        let status = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer-status?pair=${poolInfo.pool}`)
+        let status = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer-status?pair=${poolInfo.pool}`, config)
         if (logEnabled) {
             console.log(`status: ${status.data}`)
         }
@@ -279,12 +265,12 @@ async function main() {
                 console.log(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timePoint}-0`)
                 console.log(`${new Date(timeStart * 1000)}`)
             }
-            let beforeTimePointResp = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timePoint}-0&h=1`)
+            let beforeTimePointResp = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timePoint}-0&h=1`, config)
             swaps = beforeTimePointResp.data.result;
             if (logEnabled) {
                 console.log(swaps.length)
             }
-            let afterTimePointResp = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timePoint}-0`)
+            let afterTimePointResp = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timePoint}-0`, config)
             swaps = swaps.concat(afterTimePointResp.data.result);
             if (logEnabled) {
                 console.log(swaps.length)
@@ -294,7 +280,7 @@ async function main() {
                 console.log(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timeStart}-0`)
                 console.log(`${new Date(timeStart * 1000)}`)
             }
-            let afterStartTimeResp = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timeStart}-0`)
+            let afterStartTimeResp = await axios.get(`https://www.dextools.io/chain-polygon/api/Quickswap/1/pairexplorer?v=2.15.2&pair=${poolInfo.pool}&ts=${timeStart}-0`, config)
             swaps = afterStartTimeResp.data.result;
             if (logEnabled) {
                 console.log(swaps.length)
@@ -347,6 +333,7 @@ async function main() {
         }
         let poolSize = 0;
 
+        // let bribesUsd = 0.;
         if (dailyVolumeInUsd !== 0) {
             if (logEnabled) {
                 console.log(`tokenMain: ${tokenMain}`)
@@ -355,23 +342,80 @@ async function main() {
                 console.log(`balance.reserve1: ${balance.reserve1}`)
                 console.log(`balance.token0Price: ${balance.token0Price}`)
             }
+
+            let token0PriceUsd;
+            let token1PriceUsd;
+
             if (tokenMain === balance.token0address) {
+                token0PriceUsd = ethPriceUsd / lastTokenPriceInEth;
+                token1PriceUsd = token0PriceUsd * balance.token0Price;
+
                 poolSize = balance.reserve0;
                 poolSize += balance.reserve1 * balance.token0Price;
+                if (logEnabled) {
+                    console.log("poolSize: " + poolSize)
+                }
+                poolSize = poolSize * token0PriceUsd;
             } else {
+                token1PriceUsd = ethPriceUsd / lastTokenPriceInEth;
+                token0PriceUsd = token1PriceUsd / balance.token0Price;
+
                 poolSize = balance.reserve1;
                 poolSize += balance.reserve0 / balance.token0Price;
+                if (logEnabled) {
+                    console.log("poolSize: " + poolSize)
+                }
+                poolSize = poolSize * token1PriceUsd;
+            }
+
+            if (logEnabled) {
+                console.log(`token0PriceUsd: ${token0PriceUsd}`)
+                console.log(`token1PriceUsd: ${token1PriceUsd}`)
+                console.log("poolSize: " + poolSize)
             }
 
 
-            if (logEnabled) {
-                console.log("poolSize: " + poolSize)
-            }
-            poolSize = poolSize / lastTokenPriceInEth * ethPriceUsd
-            if (logEnabled) {
-                console.log("poolSize: " + poolSize)
-            }
+            // let bribes = await getRewardForPool(poolInfo.pool);
+            // if (logEnabled) {
+            //     console.log(bribes.length);
+            //     for (const bribe of bribes) {
+            //         console.log(`bribe: ${bribe.symbol} ${bribe.rewardAmount.toString()}`);
+            //     }
+            // }
+            //
+            // for (const bribe of bribes) {
+            //     if (bribe.rewardAmount.eq(new BN(0)) || bribe.decimals === null) {
+            //         continue;
+            //     }
+            //
+            //     console.log(`bribe: ${bribe.symbol} ${bribe.rewardAmount.toString()}`);
+            //
+            //     let priceE18;
+            //     if (bribe.token.toLowerCase() === balance.token0address) {
+            //         priceE18 = priceToBN_E18(token0PriceUsd);
+            //     } else if (bribe.token.toLowerCase() === balance.token1address) {
+            //         priceE18 = priceToBN_E18(token1PriceUsd);
+            //     } else {
+            //         priceE18 = new BN(0);
+            //     }
+            //     console.log(`priceE18: ${priceE18}`);
+            //     console.log(`bribe.decimals: ${bribe.decimals}`);
+            //     bribe.rewardUsd = bribe.rewardAmount
+            //         .mul(priceE18)
+            //         .div(new BN(10).pow(new BN(18)))
+            //         .div(new BN(10).pow(new BN(bribe.decimals.toString())))
+            //         .toNumber()
+            //
+            //     console.log(`rewardUsd: ${bribe.rewardUsd}`);
+            //
+            //     bribesUsd = bribesUsd + bribe.rewardUsd;
+            // }
+            //
+            // console.log(`total bribesUsd: ${bribesUsd}`);
         }
+        //
+        // console.log(`${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${poolSize.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}\t${bribesUsd.toFixed(2)}`)
+        // toFile += `${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${poolSize.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}\t${bribesUsd.toFixed(2)}\n`;
 
         console.log(`${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${poolSize.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}`)
         toFile += `${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${poolSize.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}\n`;
@@ -381,11 +425,105 @@ async function main() {
     console.log(`--------------------------`)
 
     fs.writeFileSync(`dystopia_votes_report_${timeStart}-${timeEnd}`, toFile);
+    // https://www.dextools.io/chain-polygon/api/common/ethPrice
+
+    // --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
 
 
-    // --------------------------------------------------------------------------
-    // --------------------------------------------------------------------------
-    // --------------------------------------------------------------------------
+    function priceToBN_E18(token0PriceUsd) {
+        let res = token0PriceUsd.toString().split(".");
+        let decimals = res[1].length;
+        let priceAtE18 = new BN(res[0]).mul(new BN(10).pow(new BN(decimals))).add(new BN(res[1]));
+        if (decimals > 18) {
+            priceAtE18 = priceAtE18.div(new BN(10).pow(new BN(decimals - 18)))
+        } else if (decimals < 18) {
+            priceAtE18 = priceAtE18.mul(new BN(10).pow(new BN(18 - decimals)))
+        }
+
+        return priceAtE18;
+    }
+
+
+    async function getRewardForPool(poolAddress) {
+
+        let gaugeAddress = await gaugesContract.gauges(poolAddress);
+        if (logEnabled) {
+            console.log(`gaugeAddress: ${gaugeAddress}`)
+        }
+
+        if (gaugeAddress === ZERO_ADDRESS) {
+            return [];
+        }
+
+        const bribeAddress = await gaugesContract.bribes(gaugeAddress);
+        if (logEnabled) {
+            console.log(`bribeAddress: ${bribeAddress}`)
+        }
+
+        const bribeContract = await ethers.getContractAt(
+            BRIBE_ABI,
+            bribeAddress,
+            wallet
+        );
+
+        const rewardsListLength = await bribeContract.rewardTokensLength();
+        if (logEnabled) {
+            console.log(`rewardsListLength: ${rewardsListLength}`)
+        }
+
+        if (rewardsListLength === 0) {
+            return [];
+        }
+
+
+        const bribeTokens = [
+            {address: "", rewardAmount: 0, rewardRate: 0},
+        ];
+        for (let i = 0; i < rewardsListLength; i++) {
+            let bribeTokenAddress = await bribeContract.rewardTokens(i);
+            if (logEnabled) {
+                console.log(`${i} bribeTokenAddress: ${bribeTokenAddress}`)
+            }
+            bribeTokens.push({
+                address: bribeTokenAddress,
+                rewardAmount: 0,
+                rewardRate: 0,
+            });
+        }
+
+        bribeTokens.shift();
+
+        const bribes = await Promise.all(
+            bribeTokens.map(async (bribe, idx) => {
+
+                const rewardRate = await bribeContract.rewardRate(bribe.address);
+                if (logEnabled) {
+                    console.log(`${idx} rewardRate: ${rewardRate}`)
+                }
+                let token = await ethers.getContractAt(ERC20, bribe.address, wallet);
+
+                let symbol = await symbolOrNull(token);
+                let decimals = await decimalsOrNull(token);
+
+                bribe = {
+                    token: bribe.address,
+                    symbol: symbol,
+                    decimals: decimals,
+                    rewardAmount: new BN(rewardRate.toString())
+                        .muln(604800)
+                        .div(new BN(10).pow(new BN(18)))
+                    // .divn(10 ** parseInt(decimals))
+                    // .toFixed(parseInt(decimals)),
+                };
+
+                return bribe;
+            })
+        );
+
+        return bribes;
+    }
 
 
     async function getPoolInfo(pool, index) {
