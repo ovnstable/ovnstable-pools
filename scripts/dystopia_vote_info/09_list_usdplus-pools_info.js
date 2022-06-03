@@ -16,6 +16,7 @@ let dystFactoryAddress = "0x1d21Db6cde1b18c7E47B0F7F42f4b3F68b9beeC9";
 const BigNumber = require("bignumber.js");
 const {ZERO_ADDRESS} = require("@openzeppelin/test-helpers/src/constants");
 
+const REWARD_ADDRESS = '0x39aB6574c289c3Ae4d88500eEc792AB5B947A5Eb'
 const VOTER_ADDRESS = '0x649BdF58B09A0Cd4Ac848b42c4B5e1390A72A49A'
 const VOTER_ABI = require('./voterABI').voterABI;
 const BRIBE_ABI = require('./bribeABI').bribeABI;
@@ -171,7 +172,8 @@ async function main() {
 
 
         if (logEnabled) {
-            if (poolInfo.pool.toString().toLowerCase() !== "0x5A31F830225936CA28547Ec3018188af44F21467".toLowerCase()) {
+            // if (poolInfo.pool.toString().toLowerCase() !== "0x5A31F830225936CA28547Ec3018188af44F21467".toLowerCase()) {
+            if (poolInfo.pool.toString().toLowerCase() !== "0x60c088234180b36EDcec7AA8Aa23912Bb6bed114".toLowerCase()) {
                 // if (poolInfo.pool.toString().toLowerCase() !== "0x1A5FEBA5D5846B3b840312Bd04D76ddaa6220170".toLowerCase()) {
                 index = index.subn(1);
                 continue;
@@ -383,6 +385,7 @@ async function main() {
             console.log(`total bribesUsd: ${bribesUsd}`);
         }
 
+        let aprRes = await apr(poolInfo.pool, tvlRes)
 
         let line = `${index.toString()}\t`;
         line += `${poolInfo.pool}\t`
@@ -391,6 +394,8 @@ async function main() {
         line += `${dailyVolumeInUsd.toFixed(2)}\t`
         line += `${totalWeight}\t`
         line += `${poolWeight}\t`
+        line += `${(aprRes*40/100).toFixed(2)}\t`
+        line += `${aprRes.toFixed(2)}\t`
         line += `${bribesUsd}`
         line += `${bribesString}`
 
@@ -529,6 +534,52 @@ async function main() {
         }
     }
 
+
+    async function apr(poolAddress, totalVolumeInUsd) {
+        let gaugeAddress = await gaugesContract.gauges(poolAddress);
+        if (logEnabled) {
+            console.log(`gaugeAddress: ${gaugeAddress}`)
+        }
+
+        if (gaugeAddress === ZERO_ADDRESS) {
+            return 0;
+        }
+
+        const gaugeContract = await ethers.getContractAt(
+            GAUGE_ABI,
+            gaugeAddress,
+            wallet
+        );
+
+        const rewardRate = await gaugeContract.rewardRate(REWARD_ADDRESS)
+        if (logEnabled) {
+            console.log(`rewardRate: ${rewardRate}`)
+        }
+
+        let dystprice = BigNumber(await getPriceUsd('0x39ab6574c289c3ae4d88500eec792ab5b947a5eb'));
+        if (logEnabled) {
+            console.log(`dystprice: ${dystprice}`)
+        }
+
+        const secondsPerYear = 31622400;
+
+        const valuePerYear = new BigNumber(secondsPerYear)
+            .multipliedBy(BigNumber(rewardRate.toString()))
+            .div(10 ** 18);
+        if (logEnabled) {
+            console.log(`valuePerYear: ${valuePerYear}`)
+        }
+        const apr = new BigNumber(valuePerYear)
+            .multipliedBy(dystprice)
+            .div(BigNumber(totalVolumeInUsd))
+            .div(10 ** 18)
+            .multipliedBy(100)
+            .toFixed(4);
+        if (logEnabled) {
+            console.log(`apr: ${apr}`)
+        }
+        return Number(apr);
+    }
 
     async function getRewardForPool(poolAddress) {
 
