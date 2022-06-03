@@ -4,6 +4,8 @@ const ethers = hre.ethers;
 const BN = require('bn.js');
 const {initWallet} = require("../../utils/network");
 const axios = require('axios')
+const axiosRetry = require('axios-retry');
+axiosRetry(axios, {retries: 3});
 
 let ERC20 = JSON.parse(fs.readFileSync('./abi/ERC20.json'));
 
@@ -170,7 +172,7 @@ async function main() {
 
         if (logEnabled) {
             if (poolInfo.pool.toString().toLowerCase() !== "0x5A31F830225936CA28547Ec3018188af44F21467".toLowerCase()) {
-            // if (poolInfo.pool.toString().toLowerCase() !== "0x1A5FEBA5D5846B3b840312Bd04D76ddaa6220170".toLowerCase()) {
+                // if (poolInfo.pool.toString().toLowerCase() !== "0x1A5FEBA5D5846B3b840312Bd04D76ddaa6220170".toLowerCase()) {
                 index = index.subn(1);
                 continue;
             }
@@ -331,7 +333,6 @@ async function main() {
             console.log(`ethPriceUsd: ${ethPriceUsd}  time: ${timeStart}`)
             console.log(`lastTokenPriceInEth: ${lastTokenPriceInEth}`)
         }
-        let poolSize = 0;
 
         let tvlRes = await tvl(balance);
 
@@ -339,92 +340,62 @@ async function main() {
             console.log(`tvl: ${tvlRes}`)
         }
 
-        // // let bribesUsd = 0.;
-        // if (dailyVolumeInUsd !== 0) {
-        //     if (logEnabled) {
-        //         console.log(`tokenMain: ${tokenMain}`)
-        //         console.log(`balance.token0address: ${balance.token0address}`)
-        //         console.log(`balance.reserve0: ${balance.reserve0}`)
-        //         console.log(`balance.reserve1: ${balance.reserve1}`)
-        //         console.log(`balance.token0Price: ${balance.token0Price}`)
-        //     }
-        //
-        //     let token0PriceUsd;
-        //     let token1PriceUsd;
-        //
-        //     if (tokenMain === balance.token0address) {
-        //         token0PriceUsd = ethPriceUsd / lastTokenPriceInEth;
-        //         token1PriceUsd = token0PriceUsd * balance.token0Price;
-        //
-        //         poolSize = balance.reserve0;
-        //         poolSize += balance.reserve1 * balance.token0Price;
-        //         if (logEnabled) {
-        //             console.log("poolSize: " + poolSize)
-        //         }
-        //         poolSize = poolSize * token0PriceUsd;
-        //     } else {
-        //         token1PriceUsd = ethPriceUsd / lastTokenPriceInEth;
-        //         token0PriceUsd = token1PriceUsd / balance.token0Price;
-        //
-        //         poolSize = balance.reserve1;
-        //         poolSize += balance.reserve0 / balance.token0Price;
-        //         if (logEnabled) {
-        //             console.log("poolSize: " + poolSize)
-        //         }
-        //         poolSize = poolSize * token1PriceUsd;
-        //     }
-        //
-        //     if (logEnabled) {
-        //         console.log(`token0PriceUsd: ${token0PriceUsd}`)
-        //         console.log(`token1PriceUsd: ${token1PriceUsd}`)
-        //         console.log("poolSize: " + poolSize)
-        //     }
-        //
-        //
-        //     // let bribes = await getRewardForPool(poolInfo.pool);
-        //     // if (logEnabled) {
-        //     //     console.log(bribes.length);
-        //     //     for (const bribe of bribes) {
-        //     //         console.log(`bribe: ${bribe.symbol} ${bribe.rewardAmount.toString()}`);
-        //     //     }
-        //     // }
-        //     //
-        //     // for (const bribe of bribes) {
-        //     //     if (bribe.rewardAmount.eq(new BN(0)) || bribe.decimals === null) {
-        //     //         continue;
-        //     //     }
-        //     //
-        //     //     console.log(`bribe: ${bribe.symbol} ${bribe.rewardAmount.toString()}`);
-        //     //
-        //     //     let priceE18;
-        //     //     if (bribe.token.toLowerCase() === balance.token0address) {
-        //     //         priceE18 = priceToBN_E18(token0PriceUsd);
-        //     //     } else if (bribe.token.toLowerCase() === balance.token1address) {
-        //     //         priceE18 = priceToBN_E18(token1PriceUsd);
-        //     //     } else {
-        //     //         priceE18 = new BN(0);
-        //     //     }
-        //     //     console.log(`priceE18: ${priceE18}`);
-        //     //     console.log(`bribe.decimals: ${bribe.decimals}`);
-        //     //     bribe.rewardUsd = bribe.rewardAmount
-        //     //         .mul(priceE18)
-        //     //         .div(new BN(10).pow(new BN(18)))
-        //     //         .div(new BN(10).pow(new BN(bribe.decimals.toString())))
-        //     //         .toNumber()
-        //     //
-        //     //     console.log(`rewardUsd: ${bribe.rewardUsd}`);
-        //     //
-        //     //     bribesUsd = bribesUsd + bribe.rewardUsd;
-        //     // }
-        //     //
-        //     // console.log(`total bribesUsd: ${bribesUsd}`);
-        // }
-        //
-        // console.log(`${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${poolSize.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}\t${bribesUsd.toFixed(2)}`)
-        // toFile += `${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${poolSize.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}\t${bribesUsd.toFixed(2)}\n`;
+        let bribesUsd = 0.;
+        let bribesString = "";
+        let bribes = await getRewardForPool(poolInfo.pool);
+        if (logEnabled) {
+            console.log(bribes.length);
+            for (const bribe of bribes) {
+                console.log(`bribe: ${bribe.symbol} ${bribe.rewardAmount.toString()}`);
+            }
+        }
 
-        console.log(`${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${tvlRes.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}`)
-        toFile += `${index.toString()}\t${poolInfo.pool}\t${poolInfo.token0Symbol}/${poolInfo.token1Symbol}\t${tvlRes.toFixed(2)}\t${dailyVolumeInUsd.toFixed(2)}\t${totalWeight}\t${poolWeight}\n`;
+        for (const bribe of bribes) {
+            if (logEnabled) {
+                console.log(`bribe: ${bribe.symbol} ${bribe.rewardAmount.toString()}`);
+            }
+
+            bribesString += `\t${bribe.symbol}\t${bribe.rewardAmount}`
+
+            if (bribe.rewardAmount.eq(new BN(0)) || bribe.decimals === null) {
+                continue;
+            }
+
+            let priceUsd = await getPriceUsd(bribe.token);
+            let priceE18 = priceToBN_E18(priceUsd);
+
+            bribe.rewardUsd = bribe.rewardAmount
+                .mul(priceE18)
+                .div(new BN(10).pow(new BN(18 - 2)))
+                .div(new BN(10).pow(new BN(bribe.decimals.toString())))
+                .toNumber() / 100
+
+            if (logEnabled) {
+                console.log(`priceUsd: ${priceUsd}`);
+                console.log(`priceE18: ${priceE18}`);
+                console.log(`bribe.decimals: ${bribe.decimals}`);
+                console.log(`rewardUsd: ${bribe.rewardUsd}`);
+            }
+
+            bribesUsd = bribesUsd + bribe.rewardUsd;
+        }
+        if (logEnabled) {
+            console.log(`total bribesUsd: ${bribesUsd}`);
+        }
+
+
+        let line = `${index.toString()}\t`;
+        line += `${poolInfo.pool}\t`
+        line += `${replaceMai(poolInfo.token0Symbol)}/${replaceMai(poolInfo.token1Symbol)}\t`
+        line += `${tvlRes.toFixed(2)}\t`
+        line += `${dailyVolumeInUsd.toFixed(2)}\t`
+        line += `${totalWeight}\t`
+        line += `${poolWeight}\t`
+        line += `${bribesUsd}`
+        line += `${bribesString}`
+
+        console.log(`${line}`);
+        toFile += `${line}\n`;
 
         index = index.subn(1);
     }
@@ -439,7 +410,11 @@ async function main() {
 
 
     function priceToBN_E18(token0PriceUsd) {
-        let res = token0PriceUsd.toString().split(".");
+        let priceStr = token0PriceUsd.toString();
+        if (!priceStr.includes('.')) {
+            priceStr = priceStr + ".0";
+        }
+        let res = priceStr.split(".");
         let decimals = res[1].length;
         let priceAtE18 = new BN(res[0]).mul(new BN(10).pow(new BN(decimals))).add(new BN(res[1]));
         if (decimals > 18) {
@@ -467,7 +442,7 @@ async function main() {
                 a = await axios.get(
                     `https://api.coingecko.com/api/v3/simple/token_price/polygon-pos?contract_addresses=${balance.token1address}&vs_currencies=usd`
                 );
-                if(a.data[balance.token1address] === undefined) {
+                if (a.data[balance.token1address] === undefined) {
                     return 0;
                 }
                 totalVolumeInUsdInReserve1 = BigNumber(
@@ -480,7 +455,7 @@ async function main() {
                 a = await axios.get(
                     `https://api.coingecko.com/api/v3/simple/token_price/polygon-pos?contract_addresses=${balance.token0address}&vs_currencies=usd`
                 );
-                if(a.data[balance.token0address] === undefined) {
+                if (a.data[balance.token0address] === undefined) {
                     return 0;
                 }
 
@@ -511,10 +486,10 @@ async function main() {
             // console.log(`a.data: ${balance.token0address},${balance.token1address}`)
             // console.log(`a.data: ${JSON.stringify(a.data, null,2)}`)
 
-            if(a.data[balance.token0address] === undefined) {
+            if (a.data[balance.token0address] === undefined) {
                 return 0;
             }
-            if(a.data[balance.token1address] === undefined) {
+            if (a.data[balance.token1address] === undefined) {
                 return 0;
             }
             const totalVolumeInUsdInReserve0 = BigNumber(
@@ -535,6 +510,25 @@ async function main() {
             return Number(totalVolumeInUsd);
         }
     }
+
+    async function getPriceUsd(tokenAddress) {
+        tokenAddress = tokenAddress.toLowerCase();
+        if (tokenAddress === '0x39ab6574c289c3ae4d88500eec792ab5b947a5eb') {
+            let b = await axios.get('https://api.dexscreener.io/latest/dex/pairs/polygon/0x1e08a5b6a1694bc1a65395db6f4c506498daa349')
+            // console.log(`getPriceUsd: 1: ${b.data.pair.priceUsd}`)
+            return Number(b.data.pair.priceUsd);
+        } else {
+            let a = await axios.get(
+                `https://api.coingecko.com/api/v3/simple/token_price/polygon-pos?contract_addresses=${tokenAddress}&vs_currencies=usd`
+            );
+            if (a.data[tokenAddress] === undefined) {
+                return 0;
+            }
+            // console.log(`getPriceUsd: 2: ${a.data[tokenAddress].usd}`)
+            return Number(a.data[tokenAddress].usd);
+        }
+    }
+
 
     async function getRewardForPool(poolAddress) {
 
@@ -649,10 +643,16 @@ async function main() {
         }
     }
 
+    function replaceMai(text) {
+        if (!text) {
+            return text;
+        }
+        return text.replace("miMATIC", "MAI");
+    }
 
     async function symbolOrNull(token) {
         try {
-            return await token.symbol();
+            return replaceMai(await token.symbol());
         } catch {
             return null;
         }
@@ -660,7 +660,7 @@ async function main() {
 
     async function nameOrNull(token) {
         try {
-            return await token.name();
+            return replaceMai(await token.name());
         } catch {
             return null;
         }
