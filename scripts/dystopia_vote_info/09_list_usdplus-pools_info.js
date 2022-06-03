@@ -15,6 +15,7 @@ let IDystopiaPairAbi = JSON.parse(fs.readFileSync('./abi/build/IDystopiaPair.jso
 let dystFactoryAddress = "0x1d21Db6cde1b18c7E47B0F7F42f4b3F68b9beeC9";
 const BigNumber = require("bignumber.js");
 const {ZERO_ADDRESS} = require("@openzeppelin/test-helpers/src/constants");
+const {pointed} = require("../../utils/decimals");
 
 const REWARD_ADDRESS = '0x39aB6574c289c3Ae4d88500eEc792AB5B947A5Eb'
 const VOTER_ADDRESS = '0x649BdF58B09A0Cd4Ac848b42c4B5e1390A72A49A'
@@ -357,7 +358,7 @@ async function main() {
                 console.log(`bribe: ${bribe.symbol} ${bribe.rewardAmount.toString()}`);
             }
 
-            bribesString += `\t${bribe.symbol}\t${bribe.rewardAmount}`
+            bribesString += `\t${bribe.symbol}\t${pointed(bribe.rewardAmount, bribe.decimals)}`
 
             if (bribe.rewardAmount.eq(new BN(0)) || bribe.decimals === null) {
                 continue;
@@ -394,7 +395,7 @@ async function main() {
         line += `${dailyVolumeInUsd.toFixed(2)}\t`
         line += `${totalWeight}\t`
         line += `${poolWeight}\t`
-        line += `${(aprRes*40/100).toFixed(2)}\t`
+        line += `${(aprRes * 40 / 100).toFixed(2)}\t`
         line += `${aprRes.toFixed(2)}\t`
         line += `${bribesUsd}`
         line += `${bribesString}`
@@ -434,9 +435,9 @@ async function main() {
 
     async function tvl(balance) {
 
-        if (balance.token0address === '0x39ab6574c289c3ae4d88500eec792ab5b947a5eb' || balance.token1address === '0x39ab6574c289c3ae4d88500eec792ab5b947a5eb') {
+        if (balance.token0address.toLowerCase() === '0x39ab6574c289c3ae4d88500eec792ab5b947a5eb' || balance.token1address.toLowerCase() === '0x39ab6574c289c3ae4d88500eec792ab5b947a5eb') {
             let a, b, totalVolumeInUsdInReserve1, totalVolumeInUsdInReserve0;
-            if (balance.token0address === '0x39ab6574c289c3ae4d88500eec792ab5b947a5eb') {
+            if (balance.token0address.toLowerCase() === '0x39ab6574c289c3ae4d88500eec792ab5b947a5eb') {
 
 
                 b = await axios.get('https://api.dexscreener.io/latest/dex/pairs/polygon/0x1e08a5b6a1694bc1a65395db6f4c506498daa349')
@@ -447,12 +448,12 @@ async function main() {
                 a = await axios.get(
                     `https://api.coingecko.com/api/v3/simple/token_price/polygon-pos?contract_addresses=${balance.token1address}&vs_currencies=usd`
                 );
-                if (a.data[balance.token1address] === undefined) {
+                if (a.data[balance.token1address.toLowerCase()] === undefined) {
                     return 0;
                 }
                 totalVolumeInUsdInReserve1 = BigNumber(
                     balance.reserve1
-                ).multipliedBy(BigNumber(a.data[balance.token1address].usd));
+                ).multipliedBy(BigNumber(a.data[balance.token1address.toLowerCase()].usd));
 
                 // console.log(`t0: ${totalVolumeInUsdInReserve0} price: ${b.data.pair.priceUsd}`)
                 // console.log(`t1: ${totalVolumeInUsdInReserve1} price: ${a.data[pair.token1.address].usd}`)
@@ -460,13 +461,13 @@ async function main() {
                 a = await axios.get(
                     `https://api.coingecko.com/api/v3/simple/token_price/polygon-pos?contract_addresses=${balance.token0address}&vs_currencies=usd`
                 );
-                if (a.data[balance.token0address] === undefined) {
+                if (a.data[balance.token0address.toLowerCase()] === undefined) {
                     return 0;
                 }
 
                 totalVolumeInUsdInReserve0 = BigNumber(
                     balance.reserve0
-                ).multipliedBy(BigNumber(a.data[balance.token0address].usd));
+                ).multipliedBy(BigNumber(a.data[balance.token0address.toLowerCase()].usd));
 
                 b = await axios.get('https://api.dexscreener.io/latest/dex/pairs/polygon/0x1e08a5b6a1694bc1a65395db6f4c506498daa349')
 
@@ -491,19 +492,19 @@ async function main() {
             // console.log(`a.data: ${balance.token0address},${balance.token1address}`)
             // console.log(`a.data: ${JSON.stringify(a.data, null,2)}`)
 
-            if (a.data[balance.token0address] === undefined) {
+            if (a.data[balance.token0address.toLowerCase()] === undefined) {
                 return 0;
             }
-            if (a.data[balance.token1address] === undefined) {
+            if (a.data[balance.token1address.toLowerCase()] === undefined) {
                 return 0;
             }
             const totalVolumeInUsdInReserve0 = BigNumber(
                 balance.reserve0
-            ).multipliedBy(BigNumber(a.data[balance.token0address].usd));
+            ).multipliedBy(BigNumber(a.data[balance.token0address.toLowerCase()].usd));
 
             const totalVolumeInUsdInReserve1 = BigNumber(
                 balance.reserve1
-            ).multipliedBy(BigNumber(a.data[balance.token1address].usd));
+            ).multipliedBy(BigNumber(a.data[balance.token1address.toLowerCase()].usd));
 
 
             // console.log(`t0: ${totalVolumeInUsdInReserve0} price: ${a.data[balance.token0address].usd}`)
@@ -556,7 +557,7 @@ async function main() {
             console.log(`rewardRate: ${rewardRate}`)
         }
 
-        let dystprice = BigNumber(await getPriceUsd('0x39ab6574c289c3ae4d88500eec792ab5b947a5eb'));
+        let dystprice = new BigNumber(await getPriceUsd('0x39ab6574c289c3ae4d88500eec792ab5b947a5eb'));
         if (logEnabled) {
             console.log(`dystprice: ${dystprice}`)
         }
@@ -564,21 +565,25 @@ async function main() {
         const secondsPerYear = 31622400;
 
         const valuePerYear = new BigNumber(secondsPerYear)
-            .multipliedBy(BigNumber(rewardRate.toString()))
+            .multipliedBy(new BigNumber(rewardRate.toString()))
             .div(10 ** 18);
         if (logEnabled) {
             console.log(`valuePerYear: ${valuePerYear}`)
         }
-        const apr = new BigNumber(valuePerYear)
+        let apr = new BigNumber(valuePerYear)
             .multipliedBy(dystprice)
-            .div(BigNumber(totalVolumeInUsd))
+            .div(new BigNumber(totalVolumeInUsd))
             .div(10 ** 18)
             .multipliedBy(100)
             .toFixed(4);
         if (logEnabled) {
             console.log(`apr: ${apr}`)
         }
-        return Number(apr);
+        apr = Number(apr);
+        if (Number.isNaN(apr) || !Number.isFinite(apr)) {
+            return 0;
+        }
+        return apr;
     }
 
     async function getRewardForPool(poolAddress) {
