@@ -42,7 +42,7 @@ async function main() {
                 // console.log(`payout 0x63bd1d4a`)
                 method = 'payout'
             }
-            console.log(`${new Date(transactionInfo.timeStamp*1000)} ${method} ${transactionInfo.hash} from ${transactionInfo.from}`);
+            console.log(`${new Date(transactionInfo.timeStamp * 1000).toLocaleString()} ${method} ${transactionInfo.hash} from ${transactionInfo.from}`);
 
         }
         // if (transactionInfo.hash === '0xe1c40dc08c177f6d310b23b8c3f17d5edf7bbc669a1f6a5dac56f1824ffc18fb') {
